@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="upper-wrapper">
+	<div class="search-options">
+		<form action="/search" method="post">
+			<h1>SUBPROFILE EXPLORER</h1><br>
+			<p class="description">
+				This tool provides access to the bioactivity cluster similarity for 1,883 reference (landmark)
+                compounds as determined using subprofiles derived from the Cell painting analysis in U2OS
+                cells upon compound treatment for 20 h. Thus far, thirteen clusters were defined that are
+                related to modulation of AKT/PI3K/MTOR, Aurora kinases, BET, DNA synthesis, HDAC,
+                HSP90, Na<sup>+</sup> /K<sup>+</sup>ATPase and tubulin or processes like lysosomotropism/cholesterol
+                homeostasis regulation (L/CH), mitochondrial stress (MitoStress), protein synthesis,
+                pyrimidine synthesis and uncoupling of the mitochondrial proton gradient.
+                <br><br>
+                Modulation of targets that does not lead to CPA profiles upon perturbation of U2OS cells with
+                small molecules: aryl hydrocarbon receptor (AhR), indoleamine 2,3-dioxygenase (IDO1)
+				<br><br>
+    			How to cite:
+    			<br>Pahl et al. (2023) Cell Chem Biol, <a href="https://doi.org/10.1016/j.chembiol.2023.06.003" target="_blank" class="underline">https://doi.org/10.1016/j.chembiol.2023.06.003</a>
+    			<span style="color: #8B8B8B;"><br><br>Originally submitted version available on bioRxiv:
+    			<br>Pahl et al. bioRxiv 2022.08.15.503944; doi: <a href="https://doi.org/10.1101/2022.08.15.503944" target="_blank" style="color: #8B8B8B;" class="underline">https://doi.org/10.1101/2022.08.15.503944</a></span>
+    			<br><br>
+    			For the mitochondrial stress cluster see Adariani et al. bioRxiv 2023.11.08.565491; doi: <a target="_blank" href="https://doi.org/10.1101/2023.11.08.565491">https://doi.org/10.1101/2023.11.08.565491</a>
+			</p>
+			<input class="input" type="text" name="nm" placeholder="compound name or smiles">
+			<input class="button" type="submit" value="search for compound name or smiles">
+			<!--<a href="{{url_for('static', filename=fname)}}"><button class="button download-button" disabled type="button">WIP: Download results</button></a>-->
+			<a href="/download/{{fname}}"><button class="button download-button" type="button">Download results</button></a>
+		</form>
+	</div>
+</div>
+
+{% if max_reached == True %}
+	<div class="max-message-box">
+		<p>You have already reached your max. daily count of {{  max_count  }} requests. For further research, come again tommorow.</p>
+	</div>
+{% endif %}
+
+<div class="wrapper">
+	<div class="table" id="output">
+		{% for line in output %}
+			{% set oloop = loop %}
+			<div class="column">
+			{% for value in line %}
+				{% if loop.index == 5 and oloop.index == 1 %}
+					<div class="value img-value">
+						{{value}}
+					</div>
+				{% elif oloop.index == 1 %}
+					<div class="value">
+						{{value}}
+					</div>
+				{% elif loop.index == 2 %}
+					<div class="value smile" onmousedown="copy(this.innerHTML, this)">
+						{{value}}
+					</div>
+				{% elif loop.index == 5 %}
+					<div class="value img-value">
+						<img src="data:image/jpeg;base64,{{  value  |  safe  }}">
+					</div>
+				{% else %}
+					{% if value is number %}
+						{% if value > 95 %}
+							<div class="value nf">
+								{{value}}
+							</div>
+						{% elif value > 90 %}
+							<div class="value nt">
+								{{value}}
+							</div>
+						{% elif value > 85 %}
+							<div class="value ef">
+								{{value}}
+							</div>
+						{% elif value > 80 %}
+							<div class="value et">
+								{{value}}
+							</div>
+						{% else %}
+							<div class="value">
+								{{value}}
+							</div>
+						{% endif %}
+					{% else %}
+						<div class="value">
+							{{value}}
+						</div>
+					{% endif %}
+				{% endif %}
+			{% endfor %}
+			</div>
+		{% endfor %}
+	</div>
+</div>
+
+
+{% endblock %}

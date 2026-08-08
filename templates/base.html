@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+{% block head %}
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type= "text/css" href= "{{ url_for('static', filename='styles/style.css') }}">
+	<title>Cell Painting Cluster Subprofile Explorer</title>
+        <link rel="icon" type="image/x-icon" href="{{  url_for('static', filename='logos/0B30A0EB-F516-46A1-92B5-4F277003F14B.png')  }}">
+</head>
+{% endblock %}
+<body>
+{% block navbar %}
+	<div class="navbar">
+		<div class="left desktoponly">
+			<a href="/"><img src="{{  url_for('static', filename='logos/cellpainting.png')  }}"></a>
+		</div>
+		<div class="right" id="menu">
+			<a href="/">Tool (Home)</a><br class="mobileonly">
+			<a href="/contact">Contact & Help</a><br class="mobileonly">
+			<a href="/versions" class="version">Version 1.6 (November 2023)</a><br class="mobileonly">
+		</div>
+		<div class="menu-icon-wrapper mobileonly">
+			<img src="{{  url_for('static', filename='logos/menu.png')  }}" onmousedown="trigger_menu()" id="icon">
+		</div>
+	</div>
+{% endblock %}
+
+{% block logos %}
+	<div class="logos">
+		<img src="static/logos/comas.png" width="20%">
+		<img src="static/logos/mpi.png" width="20%" style="float: right;">
+	</div>
+{% endblock %}
+
+{% block content %}{% endblock %}
+
+<script type="text/javascript" src="{{  url_for('static', filename='scripts/script.js')  }}">
+</script>
+
+</body>
+</html>

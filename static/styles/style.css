@@ -1,0 +1,437 @@
+@font-face {
+    font-family: Noto Sans;
+    src: url("NotoSans-Medium.ttf");
+}
+
+*{
+	font-family: Noto Sans;
+	color: var(--fg);
+	transition: 500ms;
+	scroll-behavior: smooth;
+	scrollbar-width: 16px;
+}
+
+:root{
+	--fg: #000;
+	--bg: #fff;
+}
+
+::-webkit-scrollbar{
+	width: 16px;
+}
+
+::-webkit-scrollbar-thumb{
+	background: var(--fg);
+}
+
+::-webkit-scrollbar-track{
+	background: var(--bg);
+}
+
+body, html{
+	background: var(--bg);
+	margin: 0;
+	padding: 0;
+}
+
+::selection{
+	color: var(--bg);
+	background: var(--fg);
+}
+
+.desktoponly{
+	display: auto;
+}
+
+.mobileonly{
+	display: none;
+}
+
+img, input{
+	user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+
+	user-drag: none;
+	-moz-user-drag: none;
+	-webkit-user-drag: none;
+	-ms-user-drag: none;
+}
+
+.navbar{
+	position: fixed;
+	width: 100vw;
+	background: black;
+	box-sizing: border-box;
+	padding: 1vw 3vw 1vw 3vw;
+	display: flex;
+	justify-content: space-between;
+    align-items: center;
+    z-index: 200;
+    user-select: none;
+}
+
+.navbar .right a{
+	color: var(--bg);
+	text-decoration: none;
+	font-size: 2vh;
+	display: block;
+	align-self: center;
+}
+
+.navbar .right p{
+	color: #cacaca;
+	text-decoration: none;
+	font-size: 2vh;
+	display: block;
+	align-self: center;
+}
+
+.right{
+	display: flex;
+	justify-content: space-between;
+	min-width: 40vw;
+}
+
+.left img{
+	max-width: 25vw;
+}
+
+.info p{
+	color: white;
+	font-size: 10px;
+}
+
+.logos img{
+	margin-top: 15vh;
+	margin-bottom: 2.5%;
+	max-width: 20vw;
+}
+
+.logos{
+	display: flex;
+	justify-content: space-between;
+}
+
+.upper-wrapper{
+	padding: 2vw;
+}
+
+.max-message-box{
+	margin: 2vw;
+	padding: .5vw 1.25vw;
+	border-radius: .75vw;
+	border: .5vh solid red;
+	display: inline-block;
+	background: #FFE1E1;
+}
+
+form input{
+	display: block;
+}
+
+form input:not(first-child), .download-button{
+	margin-top: 1vw;
+}
+
+.value p{
+	transition: 150ms;
+}
+
+.download-button{
+	transition: 100ms;
+}
+
+.download-button:hover:after{
+	content: ' (separation character is "|")';
+}
+
+.input{
+	padding: 1%;
+	background: var(--bg);
+	border: 2px solid var(--fg);
+}
+
+.button{
+	background: var(--fg);
+	color: var(--bg);
+	padding: 1%;
+	border: none;
+}
+
+.description{
+	font-size: 1.8vh;
+	width: 50vw;
+	margin-bottom: 5%;
+}
+
+.table{
+	display: flex;
+	flex-direction: row;
+	gap: 0;
+	width: auto;
+	overflow: auto;
+	margin-top: 10vh;
+}
+
+.column{
+	display: flex;
+	flex-direction: column;
+	width: 20vw;
+}
+
+.value{
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 100%;
+	overflow-x: auto;
+	white-space: nowrap;
+	aspect-ratio: 5/1;
+	overflow-y: hidden;
+	box-sizing: border-box;
+}
+
+.column:nth-child(1) .value{
+	justify-content: start;
+	/* background-color: red; */
+}
+
+.value:nth-child(1){
+	font-size: 2.2vh;
+}
+
+.value:nth-child(5){
+	aspect-ratio: 1/1;
+}
+
+.column:not(:nth-child(1)) .value:nth-child(4){
+	overflow-x: hidden;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	/*justify-content: space-around; noch von frueher, wo ich das kopier logo da hatte */
+	gap: 1vw;
+}
+
+.value:nth-child(4) img{
+	width: 2vw;
+	display: inline;
+}
+
+.value img{
+	width: 20vw;
+}
+
+.column:first-child .value p{
+	font-weight: bold;
+}
+
+.column:first-child{
+	padding: 0vw 0vw 0vw 2vw;
+	background: linear-gradient(90deg, var(--bg) 75%, transparent);
+	position: sticky;
+	left: 0;
+	flex-grow: 0;
+	flex-shrink: 0;
+	width: 20vw;
+	z-index: 100;
+}
+
+.column:not(:first-child){
+	margin-right: 3.5vw;
+}
+
+.time-info{
+	margin-left: 2vw;
+	color: lightgray;
+}
+
+.not-here{
+	max-width: 20vw;
+	visibility: hidden;
+}
+
+.structure{
+	position: absolute;
+	top: 50%;
+	left: 0%;
+	transform: translatey(-50%);
+}
+
+.et{
+    background: #cbe1eb;
+}
+
+.ef{
+    background: #7fb6d8;
+}
+
+.nt{
+    background: #3979ae;
+}
+
+.nf{
+    background: #114981;
+}
+
+.nf, .nt{
+    color: white;
+}
+
+.nf p, .nt p, .text-div p{
+    color: white;
+}
+
+/* .value{
+	border: 2px solid red;
+} */
+
+.img-value{
+	aspect-ratio: 1/1;
+	overflow: hidden;
+}
+
+.nf ::selection, .nt ::selection, .et ::selection, .ef ::selection, .nav ::selection{
+	background: var(--bg);
+	color: var(--fg);
+}
+
+.value:nth-child(1), .value:nth-child(2), .value:nth-child(3), .value:nth-child(4), .value:nth-child(5), .value:nth-child(6), .value:nth-child(7){
+    background: var(--bg);
+}
+
+.value:nth-child(1) p, .value:nth-child(2) p, .value:nth-child(3) p, .value:nth-child(4) p, .value:nth-child(5) p, .value:nth-child(6) p, .value:nth-child(7) p{
+    color: var(--fg);
+}
+
+.value:nth-child(8){
+	margin-top: 7.5vh;
+}
+
+.smile{
+    cursor: pointer !important;
+    position:relative;
+}
+
+.value:nth-child(6){
+    color: var(--fg);
+}
+
+@media only screen and (max-width: 700px){
+	.desktoponly{
+		display: none;
+	}
+
+	.mobileonly{
+		display: block;
+	}
+
+	.right{
+		position: absolute;
+		transition: 300ms;
+		background: var(--fg);
+		width: 100vw;
+		box-sizing: border-box;
+		left: 0;
+		opacity: 0;
+		visibility: hidden;
+		text-align: center;
+		flex-direction: column;
+		top: 5vh;
+		padding-top: 3vh;
+	}
+
+	.right a, .right p{
+		display: block;
+	}
+
+	.menu-icon-wrapper img{
+		height: 5vh;
+		display: block;
+	}
+
+	.menu-icon-wrapper{
+		align-items: center;
+		justify-content: center;
+		display: flex;
+		width: 100vw;
+		box-sizing: border-box;
+	}
+
+	.description{
+		width: auto;
+	}
+
+	input, .input, .button{
+		padding: 1.75vh;
+	}
+
+	.column{
+		width: 40vw !important;
+	}
+
+	.value{
+	    width: 100%;
+	}
+
+	.column:first-child{
+		background: var(--bg);
+		width: 40vw;
+	}
+
+	.column:first-child .value .not-here{
+		width: 40vw;
+	}
+
+	.table{
+		font-size: 1.5vh;
+	}
+
+	.logos img{
+		min-width: 45vw;
+	}
+
+	/*.column:not(:nth-child(1)) .value:nth-child(4){
+		overflow-x: hidden;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}*/
+
+	/*.column:not(:nth-child(1)) .value:nth-child(4) img{
+		width: 20%;
+	}*/
+
+	.max-message-box{
+		padding: 0vw 3.5vw;
+		border-radius: 2.5vw;
+	}
+
+	.value:nth-child(1){
+    	font-size: 1em;
+    	text-align: left !important;
+    	white-space: nowrap;
+    	overflow-x: auto;
+    }
+
+    .value:not(:nth-child(2), :nth-child(1)){
+        overflow: hidden;
+    }
+
+    .value{
+        height: 5em;
+        aspect-ratio: unset;
+        box-sizing: border-box;
+        padding: 0;
+    }
+
+    .value:nth-child(5){
+	    height: 40vw;
+	}
+
+	.value:nth-child(5) img{
+	    width: 100%;
+	}
+}
