@@ -1,4 +1,7 @@
 .env
 .venv
-__pycache__
+__pycache__/
+tmp/
+static/tmp/
+unused_data/
 CHANGELOG.md
