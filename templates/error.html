@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="upper-wrapper">
-	<form action="/">
-		<h1>Error: This value couldn't be found in the dataset</h1><br>
-		<p><input class="button" type="submit" value="Back to search"></p>
-	</form>
+<div class="page-container">
+	<div class="error-box">
+		<h1 class="error-title">Compound Not Found</h1>
+		<p class="error-text">The requested compound name or SMILES string could not be found in the dataset.</p>
+		<a href="/" class="ui-button-primary" style="text-decoration: none; display: inline-block;">Return to Search</a>
+	</div>
 </div>
 {% endblock %}
