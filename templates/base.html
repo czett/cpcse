@@ -1,42 +1,110 @@
 <!DOCTYPE html>
-<html>
-{% block head %}
+<html lang="en">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="stylesheet" type= "text/css" href= "{{ url_for('static', filename='styles/style.css') }}">
+	<meta name="description" content="Cell Painting Cluster Subprofile Explorer (CPCSE)">
 	<title>Cell Painting Cluster Subprofile Explorer</title>
-        <link rel="icon" type="image/x-icon" href="{{  url_for('static', filename='logos/0B30A0EB-F516-46A1-92B5-4F277003F14B.png')  }}">
+	<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='logos/0B30A0EB-F516-46A1-92B5-4F277003F14B.png') }}">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/style.css') }}">
 </head>
-{% endblock %}
 <body>
+
 {% block navbar %}
-	<div class="navbar">
-		<div class="left desktoponly">
-			<a href="/"><img src="{{  url_for('static', filename='logos/cellpainting.png')  }}"></a>
-		</div>
-		<div class="right" id="menu">
-			<a href="/">Tool (Home)</a><br class="mobileonly">
-			<a href="/contact">Contact & Help</a><br class="mobileonly">
-			<a href="/versions" class="version">Version 1.6 (November 2023)</a><br class="mobileonly">
-		</div>
-		<div class="menu-icon-wrapper mobileonly">
-			<img src="{{  url_for('static', filename='logos/menu.png')  }}" onmousedown="trigger_menu()" id="icon">
+<header class="app-header">
+	<!-- Top Navbar Row: Slightly enlargened black header -->
+	<div class="top-navbar-bg">
+		<nav class="navbar">
+			<div class="navbar-brand">
+				<a href="/">
+					<img src="{{ url_for('static', filename='logos/cellpainting.png') }}" alt="Cell Painting Explorer" class="nav-logo">
+				</a>
+			</div>
+			
+			<div class="navbar-menu" id="menu">
+				<a href="/" class="nav-link {% if request.path == '/' or request.path == '/search' %}active{% endif %}">
+					Explorer Tool
+				</a>
+				<a href="/contact" class="nav-link {% if request.path == '/contact' %}active{% endif %}">
+					Contact & Help
+				</a>
+				<a href="/versions" class="nav-link {% if request.path == '/versions' %}active{% endif %}">
+					<span class="version-badge">v1.7</span>
+				</a>
+			</div>
+
+			<div class="menu-icon-wrapper mobileonly">
+				<button class="menu-toggle-btn" onclick="trigger_menu()" aria-label="Toggle Menu">
+					<img src="{{ url_for('static', filename='logos/menu.png') }}" id="icon" alt="Menu" class="menu-icon-white">
+				</button>
+			</div>
+		</nav>
+	</div>
+
+	<!-- Institutional & Research Partners Bar: White Background with larger readable logos -->
+	<div class="partners-bar">
+		<div class="partners-container">
+			<div class="partner-item" title="COMAS - Compound Management Center">
+				<span class="partner-label">Research Partner</span>
+				<div class="partner-logo-box">
+					<img src="{{ url_for('static', filename='logos/comas.png') }}" alt="COMAS">
+				</div>
+			</div>
+			<div class="partner-item" title="Max Planck Institute of Molecular Physiology">
+				<span class="partner-label">Max Planck Institute</span>
+				<div class="partner-logo-box">
+					<img src="{{ url_for('static', filename='logos/mpi.png') }}" alt="MPI Dortmund">
+				</div>
+			</div>
 		</div>
 	</div>
+</header>
 {% endblock %}
 
-{% block logos %}
-	<div class="logos">
-		<img src="static/logos/comas.png" width="20%">
-		<img src="static/logos/mpi.png" width="20%" style="float: right;">
+<main class="main-wrapper">
+	{% block content %}{% endblock %}
+</main>
+
+<footer class="app-footer">
+	<div class="footer-inner">
+		<div class="footer-brand-line">
+			<strong>Cell Painting Cluster Subprofile Explorer (CPCSE)</strong> &bull; Max Planck Institute of Molecular Physiology & COMAS Dortmund
+		</div>
 	</div>
-{% endblock %}
+</footer>
 
-{% block content %}{% endblock %}
+<!-- Native Mobile App Bottom Navigation Bar -->
+<div class="mobile-bottom-nav mobileonly">
+	<a href="/" class="bottom-nav-item {% if request.path == '/' or request.path == '/search' %}active{% endif %}">
+		<svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<circle cx="11" cy="11" r="8"></circle>
+			<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+		</svg>
+		<span>Explorer</span>
+	</a>
+	<a href="/contact" class="bottom-nav-item {% if request.path == '/contact' %}active{% endif %}">
+		<svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+			<polyline points="22,6 12,13 2,6"></polyline>
+		</svg>
+		<span>Contact</span>
+	</a>
+	<a href="/versions" class="bottom-nav-item {% if request.path == '/versions' %}active{% endif %}">
+		<svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<polyline points="12 8 12 12 14 14"></polyline>
+			<path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"></path>
+		</svg>
+		<span>v1.7 History</span>
+	</a>
+</div>
 
-<script type="text/javascript" src="{{  url_for('static', filename='scripts/script.js')  }}">
-</script>
+<div id="toast-notification" class="toast-msg hidden">
+	<span id="toast-message">Copied to clipboard</span>
+</div>
 
+<script type="text/javascript" src="{{ url_for('static', filename='scripts/script.js') }}"></script>
 </body>
 </html>
