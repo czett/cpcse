@@ -1,30 +1,90 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="upper-wrapper">
-	<form action="/search" method="post">
-		<h1>SUBPROFILE EXPLORER</h1><br>
-		<p class="description">
-			This tool provides access to the bioactivity cluster similarity for 1,883 reference (landmark)
-                compounds as determined using subprofiles derived from the Cell painting analysis in U2OS
-                cells upon compound treatment for 20 h. Thus far, thirteen clusters were defined that are
-                related to modulation of AKT/PI3K/MTOR, Aurora kinases, BET, DNA synthesis, HDAC,
-                HSP90, Na<sup>+</sup> /K<sup>+</sup>ATPase and tubulin or processes like lysosomotropism/cholesterol
-                homeostasis regulation (L/CH), mitochondrial stress (MitoStress), protein synthesis,
-                pyrimidine synthesis and uncoupling of the mitochondrial proton gradient.
-                <br><br>
-                Modulation of targets that does not lead to CPA profiles upon perturbation of U2OS cells with
-                small molecules: aryl hydrocarbon receptor (AhR), indoleamine 2,3-dioxygenase (IDO1)
-				<br><br>
-    			How to cite:
-    			<br>Pahl et al. (2023) Cell Chem Biol, <a href="https://doi.org/10.1016/j.chembiol.2023.06.003" target="_blank" class="underline">https://doi.org/10.1016/j.chembiol.2023.06.003</a>
-    			<span style="color: #8B8B8B;"><br><br>Originally submitted version available on bioRxiv:
-    			<br>Pahl et al. bioRxiv 2022.08.15.503944; doi: <a href="https://doi.org/10.1101/2022.08.15.503944" target="_blank" style="color: #8B8B8B;" class="underline">https://doi.org/10.1101/2022.08.15.503944</a></span>
-    			<br><br>
-    			For the mitochondrial stress cluster see Adariani et al. bioRxiv 2023.11.08.565491; doi: <a target="_blank" href="https://doi.org/10.1101/2023.11.08.565491">https://doi.org/10.1101/2023.11.08.565491</a>
+<div class="search-landing">
+	<div class="hero-header">
+		<span class="hero-tag">1,883 Reference Compounds &bull; 13 Bioactivity Clusters</span>
+		<h1 class="hero-title">Subprofile Explorer</h1>
+		<p class="hero-description">Explore bioactivity cluster similarity derived from Cell Painting analysis in U2OS cells upon compound treatment for 20 h.</p>
+	</div>
+
+	<!-- Main Search Card -->
+	<div class="ui-card">
+		<form action="/search" method="post" id="search-form">
+			<div class="search-form-group">
+				<div class="search-input-wrapper">
+					<svg class="search-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<circle cx="11" cy="11" r="8"></circle>
+						<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+					</svg>
+					<input class="ui-input" type="text" name="nm" placeholder="Search by compound name or SMILES string..." required autofocus id="compound-search-input">
+					<button type="button" class="clear-btn" id="clear-btn" style="display: none;">&times;</button>
+				</div>
+				<button class="ui-button-primary" type="submit">Search Compound</button>
+			</div>
+		</form>
+
+		<div class="quick-search-section">
+			<span class="quick-label">Try searching:</span>
+			<div class="quick-pills">
+				<button type="button" class="pill-btn" onclick="fillSearch('Centrocountin 1')">Centrocountin 1</button>
+				<button type="button" class="pill-btn" onclick="fillSearch('Taxol')">Taxol</button>
+				<button type="button" class="pill-btn" onclick="fillSearch('Staurosporine')">Staurosporine</button>
+				<button type="button" class="pill-btn" onclick="fillSearch('Rapamycin')">Rapamycin</button>
+				<button type="button" class="pill-btn" onclick="fillSearch('Vorinostat')">Vorinostat</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Dataset Overview & Bioactivity Clusters -->
+	<div class="ui-card info-section">
+		<h2 class="info-section-title">About the Dataset</h2>
+		<p class="info-text">
+			This dataset provides bioactivity cluster similarities for 1,883 reference landmark compounds. Thus far, thirteen bioactivity clusters are defined relating to specific target modulations and biological processes.
 		</p>
-		<input class="input" type="text" name="nm" placeholder="compound name or smiles"><br>
-		<button class="button" type="submit">search for compound name or smiles</button><br>
-	</form>
+
+		<!-- Structured Cluster Grid -->
+		<div class="cluster-list-container">
+			<div class="cluster-list-title">Defined Bioactivity Clusters</div>
+			<div class="cluster-grid">
+				<div class="cluster-item"><span class="cluster-dot"></span>AKT / PI3K / MTOR</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>Aurora Kinases</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>BET</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>DNA Synthesis</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>HDAC</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>HSP90</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>L/CH (Lysosomotropism)</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>MitoStress (Mitochondrial)</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>Na<sup>+</sup>/K<sup>+</sup> ATPase</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>Protein Synthesis</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>Pyrimidine Synthesis</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>Tubulin</div>
+				<div class="cluster-item"><span class="cluster-dot"></span>Uncoupling (Mitochondrial)</div>
+			</div>
+		</div>
+
+		<div class="alert-note">
+			<strong>Note on Non-CPA Targets:</strong> Modulation of targets that does not lead to CPA profiles upon perturbation in U2OS cells: Aryl hydrocarbon receptor (AhR) and Indoleamine 2,3-dioxygenase (IDO1).
+		</div>
+
+		<!-- Citations Section -->
+		<div class="citations-card">
+			<div class="citations-header">How to Cite</div>
+			<ul class="citations-list">
+				<li>
+					Pahl et al. (2023) <em>Cell Chem Biol</em> &bull; 
+					<a href="https://doi.org/10.1016/j.chembiol.2023.06.003" target="_blank" rel="noopener" class="citation-link">doi:10.1016/j.chembiol.2023.06.003</a>
+				</li>
+				<li>
+					Originally submitted version: Pahl et al. bioRxiv 2022.08.15.503944 &bull; 
+					<a href="https://doi.org/10.1101/2022.08.15.503944" target="_blank" rel="noopener" class="citation-link">doi:10.1101/2022.08.15.503944</a>
+				</li>
+				<li>
+					Mitochondrial stress cluster: Adariani et al. bioRxiv 2023.11.08.565491 &bull; 
+					<a href="https://doi.org/10.1101/2023.11.08.565491" target="_blank" rel="noopener" class="citation-link">doi:10.1101/2023.11.08.565491</a>
+				</li>
+			</ul>
+		</div>
+	</div>
 </div>
 {% endblock %}
