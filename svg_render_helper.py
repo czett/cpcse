@@ -48,6 +48,17 @@ def smiles_to_svg(smiles: str, width: int = 500, height: int = 500, font_size: i
         return ""
 
 
+def _clean_split(line: str, delimiter: str = "|") -> list:
+    """Split line by delimiter and remove trailing empty fields (e.g. from '||')."""
+    cols = line.split(delimiter)
+    # If the line ends with delimiter(s) producing trailing empty fields, strip them (e.g. cols[:-2])
+    while len(cols) >= 2 and cols[-1] == "" and cols[-2] == "":
+        cols = cols[:-2]
+    if cols and cols[-1] == "":
+        cols = cols[:-1]
+    return cols
+
+
 def process_dataset(
     input_file: str = "data.txt",
     output_file: Optional[str] = "data_with_svg.txt",
@@ -67,8 +78,8 @@ def process_dataset(
         print("Empty dataset.")
         return
 
-    # Process header
-    header_cols = lines[0].split(delimiter)
+    # Process header and strip trailing delimiters
+    header_cols = _clean_split(lines[0], delimiter)
     # Check if header already has Structure column, otherwise insert
     if len(header_cols) <= structure_col_index or header_cols[structure_col_index] != "Structure":
         header_cols.insert(structure_col_index, "Structure")
@@ -85,7 +96,7 @@ def process_dataset(
         if limit is not None and i > limit:
             break
 
-        cols = line.split(delimiter)
+        cols = _clean_split(line, delimiter)
         # Column 1 is SMILES (0-indexed: 0=Trivial name, 1=Smiles)
         smiles = cols[1].strip() if len(cols) > 1 else ""
 
@@ -93,7 +104,7 @@ def process_dataset(
             svg = cache[smiles]
         else:
             svg = smiles_to_svg(smiles)
-            cache[smiles] = svg
+            cache[smiles] = cache_val = svg
 
         cols.insert(structure_col_index, svg)
         output_lines.append(delimiter.join(cols))
@@ -122,14 +133,15 @@ if __name__ == "__main__":
             with open(args.input, "r", encoding="utf-8") as f:
                 lines = [l.strip() for l in f if l.strip()]
             if len(lines) > 2:
-                sample = lines[2].split("|")
-                cleaned = sample[:-2] if sample[-1] == "" else sample
+                raw_split = lines[2].split("|")
+                cleaned = raw_split[:-2] if len(raw_split) >= 2 and raw_split[-1] == "" and raw_split[-2] == "" else raw_split
                 smilestr = cleaned[1]
-                print("Vorher (Row 2):", cleaned[:5])
+                print("Vorher (Row 2):", cleaned)
                 svgstr = smiles_to_svg(smilestr)
                 cleaned.insert(4, svgstr)
                 print("\nSVG Preview (first 120 chars):", svgstr[:120])
-                print("\nNachher (Row 2):", cleaned[:6])
+                print("\nNachher (Row 2, without trailing empty fields):", cleaned[:5] + ["<SVG>"] + cleaned[6:])
     else:
         process_dataset(args.input, args.output)
+
 
