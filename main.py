@@ -1,4 +1,4 @@
-import base64
+from decimal import Decimal
 import os
 import os.path as op
 import random
@@ -15,11 +15,10 @@ from flask import (
     send_from_directory,
     session,
 )
-from rdkit import Chem
-from rdkit.Chem.Draw import rdMolDraw2D
+import psycopg2
+from psycopg2 import pool
 
 # Constants
-DATASET_FILENAME = "data_with_svg.txt"
 DELIMITER = "|"
 MAX_SEARCH_COUNT = 1000
 TMP_FILE_MAX_AGE = 600  # seconds (10 minutes)
@@ -33,45 +32,47 @@ app = Flask(__name__)
 dotenv.load_dotenv()
 app.secret_key = os.getenv("SECRET_KEY")
 
+DATASET_HEADER = [
+    "Trivial name",
+    "Smiles",
+    "Batch No",
+    "Conc uM",
+    "Structure",
+    "Relative cell count",
+    "Induction",
+    "Cluster AKT/PI3K/MTOR",
+    "Cluster Aurora",
+    "Cluster BET",
+    "Cluster DNA synthesis",
+    "Cluster HDAC",
+    "Cluster HSP90",
+    "Cluster L/CH",
+    "Cluster MitoStress",
+    "Cluster Na+/K+ ATPase",
+    "Cluster Protein synthesis",
+    "Cluster Pyrimidine synthesis",
+    "Cluster Tubulin",
+    "Cluster Uncoupling",
+]
 
-def _load_dataset() -> Tuple[List[str], List[List[str]]]:
-    """Pre-load and parse the compound dataset at application startup."""
-    dataset_path = op.join(app.root_path, DATASET_FILENAME)
-    if not op.exists(dataset_path):
-        return [], []
-
-    with open(dataset_path, "r", encoding="latin-1") as f:
-        raw_lines = [line.strip() for line in f if line.strip()]
-
-    if not raw_lines:
-        return [], []
-
-    header = raw_lines[0].split(DELIMITER)
-    #header.insert(4, "Structure")
-
-    rows = [line.split(DELIMITER) for line in raw_lines[1:]]
-    return header, rows
-
-
-DATASET_HEADER, DATASET_ROWS = _load_dataset()
-
-
-def smiletob64(smile: str) -> str:
-    """Convert a SMILES string to a base64 encoded PNG image string."""
-    if not smile:
-        return ""
+# Database Connection Pool
+DB_STRING = os.getenv("DB_STRING")
+db_pool = None
+if DB_STRING:
     try:
-        mol = Chem.MolFromSmiles(smile)
-        if mol is None:
-            return ""
-        drawer = rdMolDraw2D.MolDraw2DCairo(500, 500)
-        drawer.SetFontSize(10)
-        drawer.DrawMolecule(mol)
-        drawer.FinishDrawing()
-        drawing_text = drawer.GetDrawingText()
-        return base64.b64encode(drawing_text).decode("utf-8")
-    except Exception:
+        db_pool = pool.ThreadedConnectionPool(minconn=1, maxconn=10, dsn=DB_STRING)
+    except Exception as e:
+        print(f"Warning: Failed to initialize database connection pool: {e}")
+
+
+def _sanitize_db_value(v: Union[None, str, Decimal, float, int]) -> Union[str, float, int]:
+    """Convert PostgreSQL decimal values to int/float and handle nulls."""
+    if v is None:
         return ""
+    if isinstance(v, Decimal):
+        f = float(v)
+        return int(f) if f.is_integer() else f
+    return v
 
 
 def gen_name(length: int = 24) -> str:
@@ -152,49 +153,62 @@ def write_data(data: List[List[Union[str, float]]], fname: str) -> None:
         # Header row includes 'Structure' column header
         if data:
             f.write(DELIMITER.join(map(str, data[0])) + "\n")
-        # Data rows omit the raw base64 image (index 4) for text export
+        # Data rows omit the raw structure SVG/image (index 4) for text export
         for row in data[1:]:
             clean_row = row[:4] + row[5:]
             f.write(DELIMITER.join(map(str, clean_row)) + "\n")
 
 
 def find_compounds(query: str) -> Optional[List[List[Union[str, float]]]]:
-    """Search dataset for compounds matching query in trivial name or SMILES."""
-    if not query:
+    """Search compounds from PostgreSQL matching query in trivial name or SMILES."""
+    if not query or not DB_STRING:
         return None
 
-    query_lower = query.lower()
-    matching_rows: List[List[Union[str, float]]] = []
+    query_param = f"%{query.strip()}%"
+    sql = """
+        SELECT
+            trivial_name, smiles, batch_no, conc_um, structure, relative_cell_count,
+            induction, cluster_akt_pi3k_mtor, cluster_aurora, cluster_bet,
+            cluster_dna_synthesis, cluster_hdac, cluster_hsp90, cluster_l_ch,
+            cluster_mitostress, cluster_na_k_atpase, cluster_protein_synthesis,
+            cluster_pyrimidine_synthesis, cluster_tubulin, cluster_uncoupling
+        FROM compounds
+        WHERE LOWER(trivial_name) LIKE LOWER(%s) OR LOWER(smiles) LIKE LOWER(%s)
+        ORDER BY batch_no, conc_um;
+    """
 
-    for line in DATASET_ROWS:
-        if len(line) < 2:
-            continue
-        name_match = query_lower in line[0].lower()
-        smiles_match = query_lower in line[1].lower()
+    conn = None
+    try:
+        if db_pool:
+            conn = db_pool.getconn()
+        else:
+            conn = psycopg2.connect(DB_STRING)
 
-        if name_match or smiles_match:
-            modified_line: List[Union[str, float]] = list(line)
-            # Insert base64 structure image at index 4
-            #modified_line.insert(4, smiletob64(line[1]))
+        with conn.cursor() as cur:
+            cur.execute(sql, (query_param, query_param))
+            rows = cur.fetchall()
 
-            # Convert numeric strings to floats
-            for i in range(len(modified_line)):
-                try:
-                    modified_line[i] = float(modified_line[i])  # type: ignore
-                except (ValueError, TypeError):
-                    pass
+        if not rows:
+            return None
 
-            matching_rows.append(modified_line)
+        matching_rows: List[List[Union[str, float]]] = []
+        for row in rows:
+            clean_row = [_sanitize_db_value(val) for val in row]
+            matching_rows.append(clean_row)
 
-    if not matching_rows:
+        output: List[List[Union[str, float]]] = [list(DATASET_HEADER)]
+        output.extend(matching_rows)
+        return output
+
+    except Exception as e:
+        print(f"Error querying database: {e}")
         return None
-
-    # Sort matching rows by Batch No (index 2) then Conc uM (index 3)
-    matching_rows.sort(key=lambda x: (x[2], x[3]))
-
-    output: List[List[Union[str, float]]] = [list(DATASET_HEADER)]
-    output.extend(matching_rows)
-    return output
+    finally:
+        if conn:
+            if db_pool:
+                db_pool.putconn(conn)
+            else:
+                conn.close()
 
 
 @app.route("/")
