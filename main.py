@@ -1,18 +1,16 @@
 from decimal import Decimal
+import io
 import os
-import os.path as op
-import random
-import string
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 import dotenv
 from flask import (
     Flask,
+    Response,
     redirect,
     render_template,
     request,
-    send_from_directory,
     session,
 )
 import psycopg2
@@ -21,12 +19,6 @@ from psycopg2 import pool
 # Constants
 DELIMITER = "|"
 MAX_SEARCH_COUNT = 1000
-TMP_FILE_MAX_AGE = 600  # seconds (10 minutes)
-TMP_FILE_MAX_COUNT = 100  # max .txt files per tmp directory
-
-# Global cleanup tracking
-LAST_CLEANUP_TIME = 0.0
-CLEANUP_INTERVAL = 60.0  # throttle directory scans to once per 60 seconds
 
 app = Flask(__name__)
 dotenv.load_dotenv()
@@ -75,88 +67,17 @@ def _sanitize_db_value(v: Union[None, str, Decimal, float, int]) -> Union[str, f
     return v
 
 
-def gen_name(length: int = 24) -> str:
-    """Generate a random lowercase string of specified length."""
-    return "".join(random.choice(string.ascii_lowercase) for _ in range(length))
-
-
-def cleanup_tmp_directories(
-    max_age_seconds: int = TMP_FILE_MAX_AGE,
-    max_files: int = TMP_FILE_MAX_COUNT,
-    force: bool = False,
-) -> None:
-    """
-    Clean up .txt files in temporary directories ('static/tmp' and 'tmp').
-
-    - Deletes files older than max_age_seconds.
-    - If total .txt files in a directory exceeds max_files, deletes the oldest files.
-    - Throttled to execute at most once per CLEANUP_INTERVAL unless force=True.
-    """
-    global LAST_CLEANUP_TIME
-    now = time.time()
-    if not force and (now - LAST_CLEANUP_TIME < CLEANUP_INTERVAL):
-        return
-    LAST_CLEANUP_TIME = now
-
-    tmp_dirs = [
-        op.join(app.root_path, "static", "tmp"),
-        op.join(app.root_path, "tmp"),
-    ]
-
-    for tmp_dir in tmp_dirs:
-        if not op.exists(tmp_dir):
-            os.makedirs(tmp_dir, exist_ok=True)
-            continue
-
-        txt_files: List[Tuple[str, float]] = []
-        for f in os.listdir(tmp_dir):
-            if f.endswith(".txt"):
-                filepath = op.join(tmp_dir, f)
-                if op.isfile(filepath):
-                    try:
-                        mtime = os.stat(filepath).st_mtime
-                        txt_files.append((filepath, mtime))
-                    except OSError:
-                        pass
-
-        # Sort files by modification time (oldest first)
-        txt_files.sort(key=lambda item: item[1])
-
-        # Remove files older than max_age_seconds
-        surviving_files: List[Tuple[str, float]] = []
-        for filepath, mtime in txt_files:
-            if (now - mtime) > max_age_seconds:
-                try:
-                    os.remove(filepath)
-                except OSError:
-                    pass
-            else:
-                surviving_files.append((filepath, mtime))
-
-        # Enforce max_files limit by deleting oldest remaining files
-        if len(surviving_files) > max_files:
-            num_to_delete = len(surviving_files) - max_files
-            for filepath, _ in surviving_files[:num_to_delete]:
-                try:
-                    os.remove(filepath)
-                except OSError:
-                    pass
-
-
-def write_data(data: List[List[Union[str, float]]], fname: str) -> None:
-    """Write search result data to a pipe-delimited text file in static/tmp/."""
-    out_dir = op.join(app.root_path, "static", "tmp")
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = op.join(out_dir, f"{fname}.txt")
-
-    with open(out_path, "w", encoding="utf-8") as f:
+def export_to_text(data: List[List[Union[str, float]]]) -> str:
+    """Format search result data into a pipe-delimited string in-memory."""
+    buf = io.StringIO()
+    if data:
         # Header row includes 'Structure' column header
-        if data:
-            f.write(DELIMITER.join(map(str, data[0])) + "\n")
-        # Data rows omit the raw structure SVG/image (index 4) for text export
-        for row in data[1:]:
-            clean_row = row[:4] + row[5:]
-            f.write(DELIMITER.join(map(str, clean_row)) + "\n")
+        buf.write(DELIMITER.join(map(str, data[0])) + "\n")
+    # Data rows omit the raw structure SVG/image (index 4) for text export
+    for row in data[1:]:
+        clean_row = row[:4] + row[5:]
+        buf.write(DELIMITER.join(map(str, clean_row)) + "\n")
+    return buf.getvalue()
 
 
 def find_compounds(query: str) -> Optional[List[List[Union[str, float]]]]:
@@ -241,10 +162,6 @@ def search():
     if not output or len(output) <= 1:
         return redirect("/error")
 
-    filen = gen_name(24)
-    write_data(output, filen)
-    cleanup_tmp_directories()
-
     end = time.time()
     elapsed_ms = int((end - start) * 1000)
 
@@ -252,29 +169,44 @@ def search():
         "main.html",
         output=output,
         counter=len(output),
+        query=inp,
         tmpfile_url="",
         max_reached=False,
         results_length=len(output) - 1,
         elapsed_ms=elapsed_ms,
-        fname=filen,
+        fname=inp,
     )
 
 
-@app.route("/download/<fname>", methods=["GET", "POST"])
-def download(fname: str):
-    """Serve generated text files from static/tmp or tmp directories."""
-    candidate_names = [f"{fname}.txt", fname] if not fname.endswith(".txt") else [fname]
-    target_dirs = [
-        op.join(app.root_path, "static", "tmp"),
-        op.join(app.root_path, "tmp"),
-    ]
+@app.route("/download", methods=["GET", "POST"])
+@app.route("/download/<path:fname>", methods=["GET", "POST"])
+def download(fname: Optional[str] = None):
+    """Generate and stream search result text export directly in-memory."""
+    # Determine the query from route parameter or query string
+    query = request.args.get("q") or fname or ""
+    # Strip any trailing extension if present in the URL parameter
+    if query.endswith(".txt"):
+        query = query[:-4]
+    query = query.strip()
 
-    for target_dir in target_dirs:
-        for name in candidate_names:
-            if op.isfile(op.join(target_dir, name)):
-                return send_from_directory(target_dir, name, as_attachment=True)
+    if not query:
+        return redirect("/")
 
-    return redirect("/")
+    results = find_compounds(query)
+    if not results or len(results) <= 1:
+        return redirect("/error")
+
+    content = export_to_text(results)
+    safe_filename = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in query) or "search_results"
+
+    return Response(
+        content,
+        mimetype="text/plain; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_filename}.txt"',
+            "Content-Type": "text/plain; charset=utf-8",
+        },
+    )
 
 
 @app.route("/contact")
