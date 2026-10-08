@@ -83,7 +83,8 @@
 						</div>
 					{% elif loop.index == 5 %}
 						<div class="value img-value">
-							<img src="data:image/jpeg;base64,{{ value | safe }}" alt="Structure" class="structure-image">
+							<!--<img src="data:image/jpeg;base64,{{ value | safe }}" alt="Structure" class="structure-image">-->
+							{{ value | safe }}
 						</div>
 					{% else %}
 						{% if value is number %}
@@ -130,7 +131,7 @@
 					<h3 class="mobile-compound-title">{{ col[0] }}</h3>
 					<span class="mobile-batch-badge">Batch {{ col[2] }} &bull; {{ col[3] }} &mu;M</span>
 				</div>
-				
+
 				<div class="mobile-smiles-box" onclick="copySmile('{{ col[1] | replace("'", "\\'") }}', this)">
 					<code>{{ col[1] }}</code>
 					<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy">
