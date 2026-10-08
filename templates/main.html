@@ -138,7 +138,11 @@
 				</div>
 
 				<div class="mobile-structure-box">
-					<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+					{% if col[4] and "<svg" in col[4] %}
+						{{ col[4] | safe }}
+					{% else %}
+						<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+					{% endif %}
 				</div>
 
 				<div class="mobile-metrics-grid">

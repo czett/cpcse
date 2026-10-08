@@ -1,3 +1,5 @@
 Flask
 python-dotenv
 rdkit
+psycopg2-binary
+
