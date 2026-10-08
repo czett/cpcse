@@ -19,7 +19,7 @@ from rdkit import Chem
 from rdkit.Chem.Draw import rdMolDraw2D
 
 # Constants
-DATASET_FILENAME = "2612.txt"
+DATASET_FILENAME = "data_with_svg.txt"
 DELIMITER = "|"
 MAX_SEARCH_COUNT = 1000
 TMP_FILE_MAX_AGE = 600  # seconds (10 minutes)
@@ -47,7 +47,7 @@ def _load_dataset() -> Tuple[List[str], List[List[str]]]:
         return [], []
 
     header = raw_lines[0].split(DELIMITER)
-    header.insert(4, "Structure")
+    #header.insert(4, "Structure")
 
     rows = [line.split(DELIMITER) for line in raw_lines[1:]]
     return header, rows
@@ -175,7 +175,7 @@ def find_compounds(query: str) -> Optional[List[List[Union[str, float]]]]:
         if name_match or smiles_match:
             modified_line: List[Union[str, float]] = list(line)
             # Insert base64 structure image at index 4
-            modified_line.insert(4, smiletob64(line[1]))
+            #modified_line.insert(4, smiletob64(line[1]))
 
             # Convert numeric strings to floats
             for i in range(len(modified_line)):
@@ -293,4 +293,4 @@ def reset():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8081))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)

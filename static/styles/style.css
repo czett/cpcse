@@ -914,21 +914,25 @@ html, body {
     line-height: 1.6;
 }
 
+.page-container.contact-container {
+    max-width: 620px;
+}
+
 .contact-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-    gap: 24px;
+    display: flex;
+    justify-content: center;
 }
 
 .contact-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 28px 32px;
+    padding: 24px 28px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    gap: 24px;
+    gap: 20px;
+    width: 100%;
+    max-width: 520px;
     box-shadow: var(--shadow-sm);
     transition: box-shadow 0.15s ease;
 }

@@ -5,3 +5,5 @@ tmp/
 static/tmp/
 unused_data/
 CHANGELOG.md
+venv
+.github
