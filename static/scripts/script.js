@@ -132,30 +132,4 @@ document.addEventListener("DOMContentLoaded", function() {
 			searchInput.focus();
 		});
 	}
-
-	// Synchronize horizontal scrolling between stacked matrix cards
-	var scrollContainers = [
-		document.getElementById("metadata-table"),
-		document.getElementById("cluster-table")
-	].filter(Boolean);
-
-	if (scrollContainers.length > 1) {
-		var isSyncing = false;
-		scrollContainers.forEach(function(container) {
-			container.addEventListener("scroll", function() {
-				if (!isSyncing) {
-					isSyncing = true;
-					var currentScroll = container.scrollLeft;
-					scrollContainers.forEach(function(other) {
-						if (other !== container) {
-							other.scrollLeft = currentScroll;
-						}
-					});
-					requestAnimationFrame(function() {
-						isSyncing = false;
-					});
-				}
-			}, { passive: true });
-		});
-	}
 });

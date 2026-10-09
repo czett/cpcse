@@ -62,12 +62,13 @@
 	{% endif %}
 
 	<!-- 1. Matrix Comparison Table (Desktop & Mobile Matrix View) -->
-	<div class="matrix-results-group" id="matrix-container">
-		<!-- Card 1: Metadata Block -->
-		<div class="matrix-card-block">
-			<div class="section-eyebrow">Compound Metadata</div>
-			<div class="table-container matrix-table-scroll" id="metadata-scroll-container">
-				<div class="matrix-table" id="metadata-table" style="--col-count: {{ (output|length - 1) if output else 1 }};">
+	<div class="matrix-scroll-wrapper" id="matrix-container">
+		<div class="matrix-results-group">
+			<!-- Card 1: Metadata Block -->
+			<div class="matrix-card-block">
+				<div class="section-eyebrow">Compound Metadata</div>
+				<div class="table-container" id="metadata-scroll-container">
+					<div class="matrix-table" id="metadata-table" style="--col-count: {{ (output|length - 1) if output else 1 }};">
 					{% if output and output|length > 0 %}
 						{% for r in range(7) %}
 							{% if r == 0 %}{% set row_class = 'row-name' %}
@@ -149,7 +150,7 @@
 		{% if output and output[0]|length > 7 %}
 		<div class="matrix-card-block">
 			<div class="section-eyebrow">Bioactivity Clusters</div>
-			<div class="table-container matrix-table-scroll" id="cluster-scroll-container">
+			<div class="table-container" id="cluster-scroll-container">
 				<div class="matrix-table" id="cluster-table" style="--col-count: {{ (output|length - 1) if output else 1 }};">
 					{% for r in range(7, output[0]|length) %}
 						{% set row_class = 'row-cluster' %}
@@ -198,6 +199,7 @@
 			</div>
 		</div>
 		{% endif %}
+		</div>
 	</div>
 
 	<!-- 2. Responsive Mobile Cards View (Optional mobile card view) -->
