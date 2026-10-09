@@ -112,7 +112,7 @@ function setResultsView(mode) {
 	}
 }
 
-// Input clear button listener
+// Input clear button listener and synchronized horizontal scrolling
 document.addEventListener("DOMContentLoaded", function() {
 	var searchInput = document.getElementById("compound-search-input");
 	var clearBtn = document.getElementById("clear-btn");
@@ -130,6 +130,32 @@ document.addEventListener("DOMContentLoaded", function() {
 			searchInput.value = "";
 			clearBtn.style.display = "none";
 			searchInput.focus();
+		});
+	}
+
+	// Synchronize horizontal scrolling between stacked matrix cards
+	var scrollContainers = [
+		document.getElementById("metadata-table"),
+		document.getElementById("cluster-table")
+	].filter(Boolean);
+
+	if (scrollContainers.length > 1) {
+		var isSyncing = false;
+		scrollContainers.forEach(function(container) {
+			container.addEventListener("scroll", function() {
+				if (!isSyncing) {
+					isSyncing = true;
+					var currentScroll = container.scrollLeft;
+					scrollContainers.forEach(function(other) {
+						if (other !== container) {
+							other.scrollLeft = currentScroll;
+						}
+					});
+					requestAnimationFrame(function() {
+						isSyncing = false;
+					});
+				}
+			}, { passive: true });
 		});
 	}
 });

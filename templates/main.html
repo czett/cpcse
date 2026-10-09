@@ -62,94 +62,109 @@
 	{% endif %}
 
 	<!-- 1. Matrix Comparison Table (Desktop & Mobile Matrix View) -->
-	<div class="table-container" id="matrix-container">
-		<div class="matrix-table" id="output" style="--col-count: {{ (output|length - 1) if output else 1 }};">
-			{% if output and output|length > 0 %}
-				{% set num_rows = output[0]|length %}
-				{% for r in range(num_rows) %}
-					{% if r == 0 %}{% set row_class = 'row-name' %}
-					{% elif r == 1 %}{% set row_class = 'row-smiles' %}
-					{% elif r == 2 %}{% set row_class = 'row-batch' %}
-					{% elif r == 3 %}{% set row_class = 'row-conc' %}
-					{% elif r == 4 %}{% set row_class = 'row-structure' %}
-					{% elif r == 5 %}{% set row_class = 'row-cell-count' %}
-					{% elif r == 6 %}{% set row_class = 'row-induction' %}
-					{% else %}{% set row_class = 'row-cluster' %}
-					{% endif %}
+	<div class="matrix-results-group" id="matrix-container">
+		<!-- Card 1: Metadata Block -->
+		<div class="matrix-card-block">
+			<div class="section-eyebrow">Compound Metadata</div>
+			<div class="table-container matrix-table-scroll" id="metadata-scroll-container">
+				<div class="matrix-table" id="metadata-table" style="--col-count: {{ (output|length - 1) if output else 1 }};">
+					{% if output and output|length > 0 %}
+						{% for r in range(7) %}
+							{% if r == 0 %}{% set row_class = 'row-name' %}
+							{% elif r == 1 %}{% set row_class = 'row-smiles' %}
+							{% elif r == 2 %}{% set row_class = 'row-batch' %}
+							{% elif r == 3 %}{% set row_class = 'row-conc' %}
+							{% elif r == 4 %}{% set row_class = 'row-structure' %}
+							{% elif r == 5 %}{% set row_class = 'row-cell-count' %}
+							{% elif r == 6 %}{% set row_class = 'row-induction' %}
+							{% endif %}
 
-					{% if r == 7 %}
-						{# Dedicated full-width section header row for Bioactivity Clusters #}
-						<div class="cluster-section-row">
-							<span class="cluster-section-title">BIOACTIVITY CLUSTERS</span>
-						</div>
-					{% endif %}
+							{# Column 0: Sticky Row Header #}
+							{% set header_label = output[0][r] %}
+							{% if r == 0 %}
+								<div class="value header-cell first-header-cell {{ row_class }}">
+									<span>{{ header_label }}</span>
+								</div>
+							{% elif r == 4 %}
+								<div class="value header-cell img-value-header {{ row_class }}">
+									<span>{{ header_label }}</span>
+								</div>
+							{% else %}
+								<div class="value header-cell {{ row_class }}">
+									<span>{{ header_label }}</span>
+								</div>
+							{% endif %}
 
-					{# Column 0: Sticky Row Header #}
-					{% set header_label = output[0][r] %}
-					{% if r == 0 %}
-						<div class="value header-cell first-header-cell {{ row_class }}">
-							<span>{{ header_label }}</span>
-						</div>
-					{% elif r == 4 %}
-						<div class="value header-cell img-value-header {{ row_class }}">
-							<span>{{ header_label }}</span>
-						</div>
-					{% elif r >= 7 %}
+							{# Columns 1..N: Data Cells for each Compound #}
+							{% for col_idx in range(1, output|length) %}
+								{% set col = output[col_idx] %}
+								{% set val = col[r] %}
+
+								{% if r == 0 %}
+									<div class="value first-data-cell {{ row_class }}">
+										<span>{{ val }}</span>
+									</div>
+								{% elif r == 1 %}
+									<div class="value smile {{ row_class }}" onclick="copySmile('{{ val | replace("'", "\\'") }}', this)" title="Click to copy SMILES">
+										<span class="smiles-text">{{ val }}</span>
+										<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy">
+									</div>
+								{% elif r == 2 or r == 3 %}
+									<div class="value {{ row_class }}">
+										{% if val is number %}
+											<span class="val-number">{{ val }}</span>
+										{% else %}
+											<span>{{ val }}</span>
+										{% endif %}
+									</div>
+								{% elif r == 4 %}
+									<div class="value img-value {{ row_class }}">
+										{{ val | safe }}
+									</div>
+								{% elif r == 5 %}
+									<div class="value cell-count-value {{ row_class }}">
+										{% if val is number %}
+											<span class="val-number">{{ val }}</span>
+										{% else %}
+											<span>{{ val }}</span>
+										{% endif %}
+									</div>
+								{% elif r == 6 %}
+									<div class="value induction-value {{ row_class }}">
+										{% if val is number %}
+											<span class="val-number">{{ val }}</span>
+										{% else %}
+											<span>{{ val }}</span>
+										{% endif %}
+									</div>
+								{% endif %}
+							{% endfor %}
+						{% endfor %}
+					{% endif %}
+				</div>
+			</div>
+		</div>
+
+		<!-- Card 2: Cluster Profiles Block -->
+		{% if output and output[0]|length > 7 %}
+		<div class="matrix-card-block">
+			<div class="section-eyebrow">Bioactivity Clusters</div>
+			<div class="table-container matrix-table-scroll" id="cluster-scroll-container">
+				<div class="matrix-table" id="cluster-table" style="--col-count: {{ (output|length - 1) if output else 1 }};">
+					{% for r in range(7, output[0]|length) %}
+						{% set row_class = 'row-cluster' %}
+						{% set header_label = output[0][r] %}
+
+						{# Column 0: Sticky Row Header #}
 						<div class="value header-cell cluster-header {{ row_class }}">
 							<span>{{ header_label | replace('Cluster ', '') }}</span>
 						</div>
-					{% else %}
-						<div class="value header-cell {{ row_class }}">
-							<span>{{ header_label }}</span>
-						</div>
-					{% endif %}
 
-					{# Columns 1..N: Data Cells for each Compound #}
-					{% for col_idx in range(1, output|length) %}
-						{% set col = output[col_idx] %}
-						{% set val = col[r] %}
+						{# Columns 1..N: Data Cells for each Compound #}
+						{% for col_idx in range(1, output|length) %}
+							{% set col = output[col_idx] %}
+							{% set val = col[r] %}
 
-						{% if r == 0 %}
-							<div class="value first-data-cell {{ row_class }}">
-								<span>{{ val }}</span>
-							</div>
-						{% elif r == 1 %}
-							<div class="value smile {{ row_class }}" onclick="copySmile('{{ val | replace("'", "\\'") }}', this)" title="Click to copy SMILES">
-								<span class="smiles-text">{{ val }}</span>
-								<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy">
-							</div>
-						{% elif r == 2 or r == 3 %}
-							<div class="value {{ row_class }}">
-								{% if val is number %}
-									<span class="val-number">{{ val }}</span>
-								{% else %}
-									<span>{{ val }}</span>
-								{% endif %}
-							</div>
-						{% elif r == 4 %}
-							<div class="value img-value {{ row_class }}">
-								{{ val | safe }}
-							</div>
-						{% elif r == 5 %}
-							{# Relative cell count: neutral text with uncolored background #}
-							<div class="value cell-count-value {{ row_class }}">
-								{% if val is number %}
-									<span class="val-number">{{ val }}</span>
-								{% else %}
-									<span>{{ val }}</span>
-								{% endif %}
-							</div>
-						{% elif r == 6 %}
-							{# Induction: neutral metadata cell #}
-							<div class="value induction-value {{ row_class }}">
-								{% if val is number %}
-									<span class="val-number">{{ val }}</span>
-								{% else %}
-									<span>{{ val }}</span>
-								{% endif %}
-							</div>
-						{% else %}
-							{# Cluster scores (r >= 7): apply heatmap tiers #}
 							{% if val is number %}
 								{% if val > 95 %}
 									<div class="value cluster-value nf {{ row_class }}">
@@ -177,11 +192,12 @@
 									<span>{{ val }}</span>
 								</div>
 							{% endif %}
-						{% endif %}
+						{% endfor %}
 					{% endfor %}
-				{% endfor %}
-			{% endif %}
+				</div>
+			</div>
 		</div>
+		{% endif %}
 	</div>
 
 	<!-- 2. Responsive Mobile Cards View (Optional mobile card view) -->

@@ -616,6 +616,34 @@ html, body {
     color: #334155;
 }
 
+.matrix-results-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+.matrix-results-group.hidden, .mobile-cards-container.hidden {
+    display: none !important;
+}
+
+.matrix-card-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.section-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted-foreground, #64748b);
+    padding-left: 2px;
+    user-select: none;
+}
+
 .table-container {
     background: var(--card);
     border: 1px solid var(--border);
@@ -624,7 +652,7 @@ html, body {
     box-shadow: var(--shadow-sm);
 }
 
-.table-container.hidden, .mobile-cards-container.hidden {
+.table-container.hidden {
     display: none !important;
 }
 
@@ -772,32 +800,6 @@ html, body {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
-}
-
-/* Dedicated full-width section header for Bioactivity Clusters */
-.cluster-section-row {
-    grid-column: 1 / -1;
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    background: #f1f5f9;
-    border-top: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 8px 12px;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    height: 38px;
-}
-
-.cluster-section-title {
-    position: sticky;
-    left: 12px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #475569;
 }
 
 /* Visually neutral cluster row headers (no accent border) */
