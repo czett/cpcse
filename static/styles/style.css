@@ -616,15 +616,23 @@ html, body {
     color: #334155;
 }
 
+/* Single shared horizontal scroll wrapper for unified, lag-free scrolling */
+.matrix-scroll-wrapper {
+    overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+.matrix-scroll-wrapper.hidden, .mobile-cards-container.hidden {
+    display: none !important;
+}
+
 .matrix-results-group {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    width: 100%;
-}
-
-.matrix-results-group.hidden, .mobile-cards-container.hidden {
-    display: none !important;
+    width: max-content;
+    min-width: 100%;
 }
 
 .matrix-card-block {
@@ -635,6 +643,8 @@ html, body {
 }
 
 .section-eyebrow {
+    position: sticky;
+    left: 2px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -642,14 +652,15 @@ html, body {
     color: var(--muted-foreground, #64748b);
     padding-left: 2px;
     user-select: none;
+    align-self: flex-start;
 }
 
 .table-container {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    overflow: hidden;
     box-shadow: var(--shadow-sm);
+    width: 100%;
 }
 
 .table-container.hidden {
@@ -659,9 +670,8 @@ html, body {
 .matrix-table {
     display: grid;
     grid-template-columns: minmax(230px, 230px) repeat(var(--col-count, 1), minmax(220px, 240px));
-    overflow-x: auto;
-    width: 100%;
-    -webkit-overflow-scrolling: touch;
+    width: max-content;
+    min-width: 100%;
 }
 
 .matrix-column {
