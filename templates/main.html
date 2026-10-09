@@ -63,61 +63,124 @@
 
 	<!-- 1. Matrix Comparison Table (Desktop & Mobile Matrix View) -->
 	<div class="table-container" id="matrix-container">
-		<div class="matrix-table" id="output">
-			{% for line in output %}
-				{% set oloop = loop %}
-				<div class="matrix-column {% if oloop.first %}header-column{% endif %}">
-				{% for value in line %}
-					{% if loop.index == 5 and oloop.index == 1 %}
-						<div class="value img-value-header">
-							<span>{{value}}</span>
+		<div class="matrix-table" id="output" style="--col-count: {{ (output|length - 1) if output else 1 }};">
+			{% if output and output|length > 0 %}
+				{% set num_rows = output[0]|length %}
+				{% for r in range(num_rows) %}
+					{% if r == 0 %}{% set row_class = 'row-name' %}
+					{% elif r == 1 %}{% set row_class = 'row-smiles' %}
+					{% elif r == 2 %}{% set row_class = 'row-batch' %}
+					{% elif r == 3 %}{% set row_class = 'row-conc' %}
+					{% elif r == 4 %}{% set row_class = 'row-structure' %}
+					{% elif r == 5 %}{% set row_class = 'row-cell-count' %}
+					{% elif r == 6 %}{% set row_class = 'row-induction' %}
+					{% else %}{% set row_class = 'row-cluster' %}
+					{% endif %}
+
+					{% if r == 7 %}
+						{# Dedicated full-width section header row for Bioactivity Clusters #}
+						<div class="cluster-section-row">
+							<span class="cluster-section-title">BIOACTIVITY CLUSTERS</span>
 						</div>
-					{% elif oloop.index == 1 %}
-						<div class="value">
-							<span>{{value}}</span>
+					{% endif %}
+
+					{# Column 0: Sticky Row Header #}
+					{% set header_label = output[0][r] %}
+					{% if r == 0 %}
+						<div class="value header-cell first-header-cell {{ row_class }}">
+							<span>{{ header_label }}</span>
 						</div>
-					{% elif loop.index == 2 %}
-						<div class="value smile" onclick="copySmile('{{ value | replace("'", "\\'") }}', this)" title="Click to copy SMILES">
-							<span class="smiles-text">{{value}}</span>
-							<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy">
+					{% elif r == 4 %}
+						<div class="value header-cell img-value-header {{ row_class }}">
+							<span>{{ header_label }}</span>
 						</div>
-					{% elif loop.index == 5 %}
-						<div class="value img-value">
-							<!--<img src="data:image/jpeg;base64,{{ value | safe }}" alt="Structure" class="structure-image">-->
-							{{ value | safe }}
+					{% elif r >= 7 %}
+						<div class="value header-cell cluster-header {{ row_class }}">
+							<span>{{ header_label | replace('Cluster ', '') }}</span>
 						</div>
 					{% else %}
-						{% if value is number %}
-							{% if value > 95 %}
-								<div class="value nf">
-									<span class="val-number">{{value}}</span>
-								</div>
-							{% elif value > 90 %}
-								<div class="value nt">
-									<span class="val-number">{{value}}</span>
-								</div>
-							{% elif value > 85 %}
-								<div class="value ef">
-									<span class="val-number">{{value}}</span>
-								</div>
-							{% elif value > 80 %}
-								<div class="value et">
-									<span class="val-number">{{value}}</span>
-								</div>
+						<div class="value header-cell {{ row_class }}">
+							<span>{{ header_label }}</span>
+						</div>
+					{% endif %}
+
+					{# Columns 1..N: Data Cells for each Compound #}
+					{% for col_idx in range(1, output|length) %}
+						{% set col = output[col_idx] %}
+						{% set val = col[r] %}
+
+						{% if r == 0 %}
+							<div class="value first-data-cell {{ row_class }}">
+								<span>{{ val }}</span>
+							</div>
+						{% elif r == 1 %}
+							<div class="value smile {{ row_class }}" onclick="copySmile('{{ val | replace("'", "\\'") }}', this)" title="Click to copy SMILES">
+								<span class="smiles-text">{{ val }}</span>
+								<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy">
+							</div>
+						{% elif r == 2 or r == 3 %}
+							<div class="value {{ row_class }}">
+								{% if val is number %}
+									<span class="val-number">{{ val }}</span>
+								{% else %}
+									<span>{{ val }}</span>
+								{% endif %}
+							</div>
+						{% elif r == 4 %}
+							<div class="value img-value {{ row_class }}">
+								{{ val | safe }}
+							</div>
+						{% elif r == 5 %}
+							{# Relative cell count: neutral text with uncolored background #}
+							<div class="value cell-count-value {{ row_class }}">
+								{% if val is number %}
+									<span class="val-number">{{ val }}</span>
+								{% else %}
+									<span>{{ val }}</span>
+								{% endif %}
+							</div>
+						{% elif r == 6 %}
+							{# Induction: neutral metadata cell #}
+							<div class="value induction-value {{ row_class }}">
+								{% if val is number %}
+									<span class="val-number">{{ val }}</span>
+								{% else %}
+									<span>{{ val }}</span>
+								{% endif %}
+							</div>
+						{% else %}
+							{# Cluster scores (r >= 7): apply heatmap tiers #}
+							{% if val is number %}
+								{% if val > 95 %}
+									<div class="value cluster-value nf {{ row_class }}">
+										<span class="val-number">{{ val }}</span>
+									</div>
+								{% elif val > 90 %}
+									<div class="value cluster-value nt {{ row_class }}">
+										<span class="val-number">{{ val }}</span>
+									</div>
+								{% elif val > 85 %}
+									<div class="value cluster-value ef {{ row_class }}">
+										<span class="val-number">{{ val }}</span>
+									</div>
+								{% elif val > 80 %}
+									<div class="value cluster-value et {{ row_class }}">
+										<span class="val-number">{{ val }}</span>
+									</div>
+								{% else %}
+									<div class="value cluster-value {{ row_class }}">
+										<span class="val-number">{{ val }}</span>
+									</div>
+								{% endif %}
 							{% else %}
-								<div class="value">
-									<span class="val-number">{{value}}</span>
+								<div class="value cluster-value {{ row_class }}">
+									<span>{{ val }}</span>
 								</div>
 							{% endif %}
-						{% else %}
-							<div class="value">
-								<span>{{value}}</span>
-							</div>
 						{% endif %}
-					{% endif %}
+					{% endfor %}
 				{% endfor %}
-				</div>
-			{% endfor %}
+			{% endif %}
 		</div>
 	</div>
 
@@ -145,9 +208,29 @@
 					{% endif %}
 				</div>
 
+				<!-- Compound Metadata (Relative cell count & Induction) -->
+				<div class="mobile-metadata-grid">
+					{% for row_idx in range(5, 7) %}
+						{% if row_idx < col|length %}
+							{% set metric_name = output[0][row_idx] %}
+							{% set metric_val = col[row_idx] %}
+							<div class="mobile-metric-item">
+								<span class="mobile-metric-label">{{ metric_name }}</span>
+								<span class="mobile-val-badge standard">{{ metric_val }}</span>
+							</div>
+						{% endif %}
+					{% endfor %}
+				</div>
+
+				<!-- Visual Separation for Clusters -->
+				<div class="mobile-section-divider">
+					<span class="mobile-section-title">Bioactivity Clusters</span>
+				</div>
+
+				<!-- Cluster Scores Grid -->
 				<div class="mobile-metrics-grid">
-					{% for row_idx in range(5, col|length) %}
-						{% set metric_name = output[0][row_idx] %}
+					{% for row_idx in range(7, col|length) %}
+						{% set metric_name = output[0][row_idx] | replace('Cluster ', '') %}
 						{% set metric_val = col[row_idx] %}
 						<div class="mobile-metric-item">
 							<span class="mobile-metric-label">{{ metric_name }}</span>
