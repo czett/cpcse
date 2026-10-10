@@ -913,6 +913,63 @@ html, body {
     height: 180px;
 }
 
+.mobile-structure-box.is-collapsed {
+    height: auto;
+    min-height: unset;
+    padding: 6px 10px;
+    display: block;
+}
+
+.structure-accordion {
+    width: 100%;
+}
+
+.structure-toggle-summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted-foreground);
+    padding: 4px 6px;
+    border-radius: 4px;
+    user-select: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    list-style-position: inside;
+}
+
+.structure-toggle-summary:hover {
+    background-color: var(--secondary);
+    color: var(--card-foreground);
+}
+
+.structure-toggle-summary span {
+    font-weight: 500;
+}
+
+.structure-accordion .structure-label-hide {
+    display: none;
+}
+
+.structure-accordion[open] .structure-label-view {
+    display: none;
+}
+
+.structure-accordion[open] .structure-label-hide {
+    display: inline;
+}
+
+.structure-accordion[open] .structure-toggle-summary {
+    margin-bottom: 8px;
+}
+
+.structure-accordion .structure-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 160px;
+}
+
 .mobile-structure-img {
     max-height: 160px;
     max-width: 100%;

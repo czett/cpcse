@@ -218,11 +218,28 @@
 					<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy">
 				</div>
 
-				<div class="mobile-structure-box">
-					{% if col[4] and "<svg" in col[4] %}
-						{{ col[4] | safe }}
+				{% set is_duplicate_compound = (col_idx > 1 and (col[0] == output[col_idx - 1][0] or col[1] == output[col_idx - 1][1])) %}
+				<div class="mobile-structure-box{% if is_duplicate_compound %} is-collapsed{% endif %}">
+					{% if is_duplicate_compound %}
+						<details class="structure-accordion">
+							<summary class="structure-toggle-summary">
+								<span class="structure-label-view">Structure identical (click to view)</span>
+								<span class="structure-label-hide">Structure identical (click to hide)</span>
+							</summary>
+							<div class="structure-content">
+								{% if col[4] and "<svg" in col[4] %}
+									{{ col[4] | safe }}
+								{% else %}
+									<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+								{% endif %}
+							</div>
+						</details>
 					{% else %}
-						<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+						{% if col[4] and "<svg" in col[4] %}
+							{{ col[4] | safe }}
+						{% else %}
+							<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+						{% endif %}
 					{% endif %}
 				</div>
 
