@@ -1,8 +1,3 @@
-/* ==========================================================================
-   Cell Painting Cluster Subprofile Explorer (CPCSE)
-   Hybrid Black Top Navbar + White Partners Bar + shadcn/ui Light System
-   ========================================================================== */
-
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
@@ -876,14 +871,51 @@ html, body {
     color: var(--card-foreground);
 }
 
+.mobile-header-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .mobile-batch-badge {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     background: var(--secondary);
     color: var(--muted-foreground);
-    padding: 2px 8px;
-    border-radius: 12px;
+    padding: 3px 8px;
+    border-radius: 6px;
     font-weight: 500;
     white-space: nowrap;
+    border: 1px solid var(--border);
+}
+
+.mobile-conc-badge {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    padding: 3px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 2px;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+}
+
+.mobile-conc-badge .conc-val {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.mobile-conc-badge .conc-unit {
+    font-size: 0.72rem;
+    font-weight: 600;
+    opacity: 0.9;
 }
 
 .mobile-smiles-box {
