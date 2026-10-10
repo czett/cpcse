@@ -110,10 +110,22 @@
 										<span class="smiles-text">{{ val }}</span>
 										<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy">
 									</div>
-								{% elif r == 2 or r == 3 %}
+								{% elif r == 2 %}
 									<div class="value {{ row_class }}">
 										{% if val is number %}
-											<span class="val-number">{{ val }}</span>
+											<span class="val-number">{{ val | round | int }}</span>
+										{% else %}
+											<span>{{ val }}</span>
+										{% endif %}
+									</div>
+								{% elif r == 3 %}
+									<div class="value {{ row_class }}">
+										{% if val is number %}
+										    {% if val < 1 %}
+												<span class="val-number">{{ val }}</span>
+											{% else %}
+											    <span class="val-number">{{ val | round | int }}</span>
+											{% endif %}
 										{% else %}
 											<span>{{ val }}</span>
 										{% endif %}
@@ -125,7 +137,7 @@
 								{% elif r == 5 %}
 									<div class="value cell-count-value {{ row_class }}">
 										{% if val is number %}
-											<span class="val-number">{{ val }}</span>
+											<span class="val-number">{{ val | round | int }}</span>
 										{% else %}
 											<span>{{ val }}</span>
 										{% endif %}
@@ -133,7 +145,7 @@
 								{% elif r == 6 %}
 									<div class="value induction-value {{ row_class }}">
 										{% if val is number %}
-											<span class="val-number">{{ val }}</span>
+											<span class="val-number">{{ val | round | int }}</span>
 										{% else %}
 											<span>{{ val }}</span>
 										{% endif %}
@@ -169,23 +181,23 @@
 							{% if val is number %}
 								{% if val > 95 %}
 									<div class="value cluster-value nf {{ row_class }}">
-										<span class="val-number">{{ val }}</span>
+										<span class="val-number">{{ val | round | int }}</span>
 									</div>
 								{% elif val > 90 %}
 									<div class="value cluster-value nt {{ row_class }}">
-										<span class="val-number">{{ val }}</span>
+										<span class="val-number">{{ val | round | int }}</span>
 									</div>
 								{% elif val > 85 %}
 									<div class="value cluster-value ef {{ row_class }}">
-										<span class="val-number">{{ val }}</span>
+										<span class="val-number">{{ val | round | int }}</span>
 									</div>
 								{% elif val > 80 %}
 									<div class="value cluster-value et {{ row_class }}">
-										<span class="val-number">{{ val }}</span>
+										<span class="val-number">{{ val | round | int }}</span>
 									</div>
 								{% else %}
 									<div class="value cluster-value {{ row_class }}">
-										<span class="val-number">{{ val }}</span>
+										<span class="val-number">{{ val | round | int }}</span>
 									</div>
 								{% endif %}
 							{% else %}
@@ -210,7 +222,13 @@
 			<div class="mobile-compound-card">
 				<div class="mobile-card-header">
 					<h3 class="mobile-compound-title">{{ col[0] }}</h3>
-					<span class="mobile-batch-badge">Batch {{ col[2] }} &bull; {{ col[3] }} &mu;M</span>
+					<div class="mobile-header-badges">
+						<span class="mobile-batch-badge">Batch {{ col[2] if col[2] is not number else (col[2] | round | int) }}</span>
+						<span class="mobile-conc-badge">
+							<span class="conc-val">{% if col[3] is number %}{% if col[3] < 1 %}{{ col[3] }}{% else %}{{ col[3] | round | int }}{% endif %}{% else %}{{ col[3] }}{% endif %}</span>
+							<span class="conc-unit">&mu;M</span>
+						</span>
+					</div>
 				</div>
 
 				<div class="mobile-smiles-box" onclick="copySmile('{{ col[1] | replace("'", "\\'") }}', this)">
@@ -218,11 +236,28 @@
 					<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy">
 				</div>
 
-				<div class="mobile-structure-box">
-					{% if col[4] and "<svg" in col[4] %}
-						{{ col[4] | safe }}
+				{% set is_duplicate_compound = (col_idx > 1 and (col[0] == output[col_idx - 1][0] or col[1] == output[col_idx - 1][1])) %}
+				<div class="mobile-structure-box{% if is_duplicate_compound %} is-collapsed{% endif %}">
+					{% if is_duplicate_compound %}
+						<details class="structure-accordion">
+							<summary class="structure-toggle-summary">
+								<span class="structure-label-view">Structure identical (click to view)</span>
+								<span class="structure-label-hide">Structure identical (click to hide)</span>
+							</summary>
+							<div class="structure-content">
+								{% if col[4] and "<svg" in col[4] %}
+									{{ col[4] | safe }}
+								{% else %}
+									<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+								{% endif %}
+							</div>
+						</details>
 					{% else %}
-						<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+						{% if col[4] and "<svg" in col[4] %}
+							{{ col[4] | safe }}
+						{% else %}
+							<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+						{% endif %}
 					{% endif %}
 				</div>
 
@@ -234,7 +269,7 @@
 							{% set metric_val = col[row_idx] %}
 							<div class="mobile-metric-item">
 								<span class="mobile-metric-label">{{ metric_name }}</span>
-								<span class="mobile-val-badge standard">{{ metric_val }}</span>
+								<span class="mobile-val-badge standard">{% if metric_val is number %}{{ metric_val | round | int }}{% else %}{{ metric_val }}{% endif %}</span>
 							</div>
 						{% endif %}
 					{% endfor %}
@@ -254,15 +289,15 @@
 							<span class="mobile-metric-label">{{ metric_name }}</span>
 							{% if metric_val is number %}
 								{% if metric_val > 95 %}
-									<span class="mobile-val-badge nf">{{ metric_val }}</span>
+									<span class="mobile-val-badge nf">{{ metric_val | round | int }}</span>
 								{% elif metric_val > 90 %}
-									<span class="mobile-val-badge nt">{{ metric_val }}</span>
+									<span class="mobile-val-badge nt">{{ metric_val | round | int }}</span>
 								{% elif metric_val > 85 %}
-									<span class="mobile-val-badge ef">{{ metric_val }}</span>
+									<span class="mobile-val-badge ef">{{ metric_val | round | int }}</span>
 								{% elif metric_val > 80 %}
-									<span class="mobile-val-badge et">{{ metric_val }}</span>
+									<span class="mobile-val-badge et">{{ metric_val | round | int }}</span>
 								{% else %}
-									<span class="mobile-val-badge standard">{{ metric_val }}</span>
+									<span class="mobile-val-badge standard">{{ metric_val | round | int }}</span>
 								{% endif %}
 							{% else %}
 								<span class="mobile-val-badge standard">{{ metric_val }}</span>

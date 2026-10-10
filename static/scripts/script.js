@@ -112,7 +112,7 @@ function setResultsView(mode) {
 	}
 }
 
-// Input clear button listener and synchronized horizontal scrolling
+// Input clear button listener and responsive initial view setup
 document.addEventListener("DOMContentLoaded", function() {
 	var searchInput = document.getElementById("compound-search-input");
 	var clearBtn = document.getElementById("clear-btn");
@@ -131,5 +131,10 @@ document.addEventListener("DOMContentLoaded", function() {
 			clearBtn.style.display = "none";
 			searchInput.focus();
 		});
+	}
+
+	// On mobile devices (<= 768px), default results view to cards
+	if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) {
+		setResultsView("cards");
 	}
 });

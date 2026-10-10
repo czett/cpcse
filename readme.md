@@ -31,5 +31,5 @@ The Subprofile Explorer provides access to 1,883 reference landmark compounds ac
 ## Citation & Publications
 
 The underlying dataset and screening methodology are published in:
-> Pahl et al. (2023). *Cell Chemical Biology*, [doi:10.1016/j.chembiol.2023.06.003](https://doi.org/10.1016/j.chembiol.2023.06.003)
-> Adariani et al. (2023). bioRxiv, [doi:10.1101/2023.11.08.565491](https://doi.org/10.1101/2023.11.08.565491)
+> - Pahl et al. (2023). *Cell Chemical Biology*, [doi:10.1016/j.chembiol.2023.06.003](https://doi.org/10.1016/j.chembiol.2023.06.003)
+> - Adariani et al. (2023). bioRxiv, [doi:10.1101/2023.11.08.565491](https://doi.org/10.1101/2023.11.08.565491)
