@@ -141,4 +141,173 @@ document.addEventListener("DOMContentLoaded", function() {
 	if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) {
 		setResultsView("cards");
 	}
+
+	initTagInput();
 });
+
+// ==========================================================================
+// ADVANCED SEARCH INTERACTIVITY
+// ==========================================================================
+
+var substancesList = [];
+
+function toggleAdvancedSearch(forceState) {
+	var panel = document.getElementById("adv-search-panel");
+	var toggleBtn = document.getElementById("adv-search-toggle-btn");
+	if (!panel) return;
+
+	var isCurrentlyHidden = panel.classList.contains("hidden");
+	var shouldShow = (typeof forceState === "boolean") ? forceState : isCurrentlyHidden;
+
+	if (shouldShow) {
+		panel.classList.remove("hidden");
+		if (toggleBtn) {
+			toggleBtn.classList.add("active");
+			toggleBtn.setAttribute("aria-expanded", "true");
+		}
+		// Focus tag input if visible
+		var tagInput = document.getElementById("tag-text-input");
+		if (tagInput) tagInput.focus();
+	} else {
+		panel.classList.add("hidden");
+		if (toggleBtn) {
+			toggleBtn.classList.remove("active");
+			toggleBtn.setAttribute("aria-expanded", "false");
+		}
+	}
+}
+
+function focusTagInput() {
+	var tagInput = document.getElementById("tag-text-input");
+	if (tagInput) tagInput.focus();
+}
+
+function initTagInput() {
+	var tagInput = document.getElementById("tag-text-input");
+	if (!tagInput) return;
+
+	tagInput.addEventListener("keydown", function(e) {
+		if (e.key === "," || e.key === "Enter" || e.key === "Tab") {
+			var val = this.value.trim().replace(/^,+|,+$/g, "");
+			if (val.length > 0) {
+				e.preventDefault();
+				addTag(val);
+				this.value = "";
+			}
+		} else if (e.key === "Backspace" && this.value === "" && substancesList.length > 0) {
+			removeTag(substancesList.length - 1);
+		}
+	});
+
+	tagInput.addEventListener("blur", function() {
+		var val = this.value.trim().replace(/^,+|,+$/g, "");
+		if (val.length > 0) {
+			addTag(val);
+			this.value = "";
+		}
+	});
+}
+
+function addTag(text) {
+	var clean = text.trim();
+	if (!clean) return;
+	// Prevent duplicate identical tags
+	if (substancesList.includes(clean)) return;
+
+	substancesList.push(clean);
+	renderTags();
+	syncSubstancesHidden();
+}
+
+function removeTag(index) {
+	if (index >= 0 && index < substancesList.length) {
+		substancesList.splice(index, 1);
+		renderTags();
+		syncSubstancesHidden();
+	}
+}
+
+function renderTags() {
+	var container = document.getElementById("tags-list");
+	if (!container) return;
+	container.innerHTML = "";
+
+	substancesList.forEach(function(tag, idx) {
+		var pill = document.createElement("span");
+		pill.className = "substance-pill";
+
+		var label = document.createElement("span");
+		label.innerText = tag;
+		pill.appendChild(label);
+
+		var removeBtn = document.createElement("button");
+		removeBtn.type = "button";
+		removeBtn.className = "pill-remove-btn";
+		removeBtn.innerHTML = "&times;";
+		removeBtn.setAttribute("aria-label", "Remove " + tag);
+		removeBtn.onclick = function(e) {
+			e.stopPropagation();
+			removeTag(idx);
+		};
+		pill.appendChild(removeBtn);
+
+		container.appendChild(pill);
+	});
+}
+
+function syncSubstancesHidden() {
+	var hiddenInput = document.getElementById("substances-hidden");
+	if (hiddenInput) {
+		hiddenInput.value = substancesList.join(",");
+	}
+}
+
+function toggleClusterFilter(clusterKey, isChecked) {
+	var card = document.getElementById("card-" + clusterKey);
+	var ctrl = document.getElementById("ctrl-" + clusterKey);
+	var hiddenInput = document.getElementById("input-" + clusterKey);
+	var slider = ctrl ? ctrl.querySelector(".threshold-slider") : null;
+
+	if (isChecked) {
+		if (card) card.classList.add("is-active");
+		if (ctrl) ctrl.classList.remove("hidden");
+		if (hiddenInput) {
+			hiddenInput.disabled = false;
+			hiddenInput.value = slider ? slider.value : "80";
+		}
+	} else {
+		if (card) card.classList.remove("is-active");
+		if (ctrl) ctrl.classList.add("hidden");
+		if (hiddenInput) {
+			hiddenInput.disabled = true;
+			hiddenInput.value = "";
+		}
+	}
+}
+
+function updateThresholdVal(clusterKey, val) {
+	var valBox = document.getElementById("val-" + clusterKey);
+	var hiddenInput = document.getElementById("input-" + clusterKey);
+
+	if (valBox) valBox.innerText = val + "%";
+	if (hiddenInput && !hiddenInput.disabled) {
+		hiddenInput.value = val;
+	}
+}
+
+function resetAdvancedFilters() {
+	// 1. Clear tags
+	substancesList = [];
+	renderTags();
+	syncSubstancesHidden();
+	var tagInput = document.getElementById("tag-text-input");
+	if (tagInput) tagInput.value = "";
+
+	// 2. Uncheck all cluster filters
+	var checks = document.querySelectorAll(".cluster-filter-check");
+	checks.forEach(function(chk) {
+		chk.checked = false;
+		var key = chk.getAttribute("data-cluster");
+		if (key) toggleClusterFilter(key, false);
+	});
+}
