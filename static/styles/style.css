@@ -585,22 +585,22 @@ html, body {
     font-size: 0.75rem;
 }
 
-.legend-badge.nf, .value.nf, .mobile-val-badge.nf {
+.legend-badge.nf, .cluster-badge.nf, .value.nf, .mobile-val-badge.nf {
     background-color: #1e3a8a;
     color: #ffffff !important;
 }
 
-.legend-badge.nt, .value.nt, .mobile-val-badge.nt {
+.legend-badge.nt, .cluster-badge.nt, .value.nt, .mobile-val-badge.nt {
     background-color: #2563eb;
     color: #ffffff !important;
 }
 
-.legend-badge.ef, .value.ef, .mobile-val-badge.ef {
+.legend-badge.ef, .cluster-badge.ef, .value.ef, .mobile-val-badge.ef {
     background-color: #bfdbfe;
     color: #1e3a8a !important;
 }
 
-.legend-badge.et, .value.et, .mobile-val-badge.et {
+.legend-badge.et, .cluster-badge.et, .value.et, .mobile-val-badge.et {
     background-color: #eff6ff;
     color: #1e40af !important;
     border: 1px solid #bfdbfe;
@@ -826,9 +826,25 @@ html, body {
     font-weight: 500;
 }
 
+.value.row-cluster:not(.header-cell) {
+    padding: 0;
+}
+
+.cluster-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(100% - 8px);
+    height: calc(100% - 6px);
+    margin: 3px 4px;
+    border-radius: 8px;
+    font-weight: 600;
+    box-sizing: border-box;
+    transition: background-color 0.15s ease;
+}
+
 .value.nf, .value.nt, .value.ef, .value.et {
-    border-radius: 4px;
-    margin: 3px 6px;
+    border-radius: 8px;
     height: 36px;
     font-weight: 600;
 }

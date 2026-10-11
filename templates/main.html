@@ -180,20 +180,20 @@
 
 							{% if val is number %}
 								{% if val > 95 %}
-									<div class="value cluster-value nf {{ row_class }}">
-										<span class="val-number">{{ val | round | int }}</span>
+									<div class="value cluster-value {{ row_class }}">
+										<span class="cluster-badge nf val-number">{{ val | round | int }}</span>
 									</div>
 								{% elif val > 90 %}
-									<div class="value cluster-value nt {{ row_class }}">
-										<span class="val-number">{{ val | round | int }}</span>
+									<div class="value cluster-value {{ row_class }}">
+										<span class="cluster-badge nt val-number">{{ val | round | int }}</span>
 									</div>
 								{% elif val > 85 %}
-									<div class="value cluster-value ef {{ row_class }}">
-										<span class="val-number">{{ val | round | int }}</span>
+									<div class="value cluster-value {{ row_class }}">
+										<span class="cluster-badge ef val-number">{{ val | round | int }}</span>
 									</div>
 								{% elif val > 80 %}
-									<div class="value cluster-value et {{ row_class }}">
-										<span class="val-number">{{ val | round | int }}</span>
+									<div class="value cluster-value {{ row_class }}">
+										<span class="cluster-badge et val-number">{{ val | round | int }}</span>
 									</div>
 								{% else %}
 									<div class="value cluster-value {{ row_class }}">
