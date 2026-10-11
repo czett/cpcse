@@ -1113,12 +1113,14 @@ html, body {
 }
 
 .page-container.contact-container {
-    max-width: 620px;
+    max-width: 960px;
 }
 
 .contact-grid {
-    display: flex;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    align-items: stretch;
 }
 
 .contact-card {
@@ -1130,9 +1132,8 @@ html, body {
     flex-direction: column;
     gap: 20px;
     width: 100%;
-    max-width: 520px;
     box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.15s ease;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .contact-card:hover {
@@ -1163,6 +1164,13 @@ html, body {
     font-size: 0.875rem;
     color: var(--muted-foreground);
     line-height: 1.55;
+}
+
+.contact-desc {
+    font-size: 0.85rem;
+    color: var(--muted-foreground);
+    line-height: 1.55;
+    margin-top: 4px;
 }
 
 .email-section {
@@ -1418,10 +1426,21 @@ html, body {
 
     .contact-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
 
     .contact-card {
-        padding: 20px 24px;
+        padding: 18px 20px;
+        gap: 16px;
+    }
+
+    .email-row {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .email-row code {
+        font-size: 0.8rem;
     }
 
     .quick-search-section {

@@ -34,24 +34,28 @@ function showToast(message) {
 }
 
 function copySmile(textToCopy, element) {
+	copyGeneric(textToCopy, element, "SMILES string copied!");
+}
+
+function copyText(textToCopy, element, message) {
+	copyGeneric(textToCopy, element, message || "Email address copied!");
+}
+
+function copyGeneric(textToCopy, element, message) {
 	if (!textToCopy) return;
 
 	if (navigator.clipboard && window.isSecureContext) {
 		navigator.clipboard.writeText(textToCopy).then(function() {
-			handleCopyFeedback(element);
+			handleCopyFeedback(element, message);
 		}).catch(function() {
-			fallbackCopyText(textToCopy, element);
+			fallbackCopyText(textToCopy, element, message);
 		});
 	} else {
-		fallbackCopyText(textToCopy, element);
+		fallbackCopyText(textToCopy, element, message);
 	}
 }
 
-function copyText(textToCopy, element) {
-	copySmile(textToCopy, element);
-}
-
-function fallbackCopyText(textToCopy, element) {
+function fallbackCopyText(textToCopy, element, message) {
 	let textArea = document.createElement("textarea");
 	textArea.value = textToCopy;
 	textArea.style.position = "fixed";
@@ -63,15 +67,15 @@ function fallbackCopyText(textToCopy, element) {
 
 	try {
 		document.execCommand('copy');
-		handleCopyFeedback(element);
+		handleCopyFeedback(element, message);
 	} catch (err) {
 		console.error('Fallback copy failed', err);
 	}
 	textArea.remove();
 }
 
-function handleCopyFeedback(element) {
-	showToast("SMILES string copied!");
+function handleCopyFeedback(element, message) {
+	showToast(message || "Copied to clipboard!");
 	if (element) {
 		element.classList.add("copied-pulse");
 		setTimeout(function() {
