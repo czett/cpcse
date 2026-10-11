@@ -12,6 +12,7 @@ The Subprofile Explorer provides access to 1,883 reference landmark compounds ac
 
 ### Key Features
 - **Compound Search & Matrix View:** Query compounds by name or SMILES string and compare cluster values side by side in a structured data grid.
+- **Advanced Search:** Pick custom threshold for clusters / search for multiple queries at once.
 - **2D Structure Visualization:** Chemical structures rendered as SVGs (precomputed with RDKit) directly alongside compound metadata.
 - **Result Export:** Download query results as delimited text files for local analysis.
 - **Lightweight Backend:** Flask application backed by PostgreSQL (Neon), deployed serverlessly on Vercel.
