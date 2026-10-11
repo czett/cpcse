@@ -44,22 +44,19 @@
 			<div class="adv-search-panel hidden" id="adv-search-panel">
 				<div class="adv-panel-inner">
 					<div class="adv-panel-header">
-						<div class="adv-panel-title-group">
-							<span class="adv-badge">Optional</span>
-							<h3 class="adv-panel-title">Advanced Search Filters</h3>
-						</div>
-						<p class="adv-panel-desc">Combine multi-substance matching with bioactivity cluster similarity thresholds.</p>
+						<h3 class="adv-panel-title">Advanced Search Filters</h3>
+						<p class="adv-panel-desc">Filter by substance tokens, cluster similarity thresholds, or both.</p>
 					</div>
 
 					<!-- Option A: Multi-Substance Tag Input -->
 					<div class="adv-field-group">
 						<div class="adv-field-header">
 							<label class="adv-field-label">Multi-Substance Search</label>
-							<span class="adv-field-hint">Type substance name and press <kbd>,</kbd> or <kbd>Enter</kbd></span>
+							<span class="adv-field-hint">Search names or SMILES &bull; press <kbd>,</kbd> or <kbd>Enter</kbd> to add</span>
 						</div>
 						<div class="tag-input-container" id="tag-input-box" onclick="focusTagInput()">
 							<div class="tags-list" id="tags-list"></div>
-							<input type="text" class="tag-bare-input" id="tag-text-input" placeholder="e.g. Centrocountin 1, Taxol, Vorinostat...">
+							<input type="text" class="tag-bare-input" id="tag-text-input" placeholder="Type compound or SMILES and press comma...">
 						</div>
 						<input type="hidden" name="substances" id="substances-hidden">
 					</div>
@@ -125,7 +122,7 @@
 						</div>
 						<div class="adv-footer-right">
 							<button type="button" class="adv-cancel-btn" onclick="toggleAdvancedSearch(false)">Collapse</button>
-							<button type="submit" class="ui-button-primary">Apply &amp; Search</button>
+							<button type="submit" formnovalidate class="ui-button-primary">Apply &amp; Search</button>
 						</div>
 					</div>
 				</div>

@@ -165,6 +165,25 @@ function toggleAdvancedSearch(forceState) {
 			toggleBtn.classList.add("active");
 			toggleBtn.setAttribute("aria-expanded", "true");
 		}
+		// Re-enable inputs for advanced search mode
+		var hiddenSubstances = document.getElementById("substances-hidden");
+		if (hiddenSubstances) hiddenSubstances.disabled = false;
+
+		var skipCheck = document.getElementById("skip-svg-check");
+		if (skipCheck) skipCheck.disabled = false;
+
+		// Re-enable active threshold inputs
+		var activeChecks = document.querySelectorAll(".cluster-filter-check:checked");
+		activeChecks.forEach(function(chk) {
+			var key = chk.getAttribute("data-cluster");
+			var input = document.getElementById("input-" + key);
+			if (input) input.disabled = false;
+		});
+
+		// Allow submission without primary search input while in advanced mode
+		var mainInputs = document.querySelectorAll("input[name='nm']");
+		mainInputs.forEach(function(inp) { inp.removeAttribute("required"); });
+
 		// Focus tag input if visible
 		var tagInput = document.getElementById("tag-text-input");
 		if (tagInput) tagInput.focus();
@@ -174,6 +193,8 @@ function toggleAdvancedSearch(forceState) {
 			toggleBtn.classList.remove("active");
 			toggleBtn.setAttribute("aria-expanded", "false");
 		}
+		var mainInputs = document.querySelectorAll("input[name='nm']");
+		mainInputs.forEach(function(inp) { inp.setAttribute("required", "required"); });
 	}
 }
 
@@ -200,12 +221,81 @@ function initTagInput() {
 	});
 
 	tagInput.addEventListener("blur", function() {
-		var val = this.value.trim().replace(/^,+|,+$/g, "");
+		flushPendingTagInput();
+	});
+
+	// Before any search form submission, handle strict state isolation between Basic and Advanced search
+	var searchForms = document.querySelectorAll("form[action='/search']");
+	searchForms.forEach(function(form) {
+		form.addEventListener("submit", function(e) {
+			var advPanel = document.getElementById("adv-search-panel");
+			var isAdvActive = advPanel && !advPanel.classList.contains("hidden");
+			var mainInput = form.querySelector("input[name='nm']");
+
+			if (isAdvActive) {
+				// ADVANCED SEARCH MODE:
+				flushPendingTagInput();
+
+				var hiddenSubstances = document.getElementById("substances-hidden");
+				var hasSubstances = hiddenSubstances && hiddenSubstances.value.trim().length > 0;
+				var activeThresholdInputs = form.querySelectorAll(".cluster-threshold-ctrl:not(.hidden) input[type='hidden']:not(:disabled)");
+				var hasThresholds = activeThresholdInputs.length > 0;
+
+				// A query is valid if substances are present, or cluster thresholds are active, or both
+				if (!hasSubstances && !hasThresholds) {
+					e.preventDefault();
+					showToast("Add at least one substance pill or activate a cluster threshold");
+					var tagInput = document.getElementById("tag-text-input");
+					if (tagInput) tagInput.focus();
+					return false;
+				}
+
+				// Strict isolation: clear top search bar input so it does not bleed into advanced search
+				if (mainInput) {
+					mainInput.removeAttribute("required");
+					mainInput.value = "";
+				}
+			} else {
+				// BASIC SEARCH MODE (Advanced panel is collapsed):
+				// Strict isolation: ignore and disable all background advanced inputs for this submission
+				var hiddenSubstances = document.getElementById("substances-hidden");
+				if (hiddenSubstances) hiddenSubstances.disabled = true;
+
+				var thresholdInputs = document.querySelectorAll("input[name^='threshold_']");
+				thresholdInputs.forEach(function(ti) { ti.disabled = true; });
+
+				var skipCheck = document.getElementById("skip-svg-check");
+				if (skipCheck) skipCheck.disabled = true;
+
+				// Validate basic search input: must not be empty or pure whitespace
+				var queryVal = mainInput ? mainInput.value.trim() : "";
+				if (!queryVal) {
+					e.preventDefault();
+					if (mainInput) {
+						mainInput.value = "";
+						mainInput.focus();
+					}
+					showToast("Please enter a compound name or SMILES");
+					return false;
+				}
+
+				if (mainInput) {
+					mainInput.value = queryVal;
+				}
+			}
+		});
+	});
+}
+
+function flushPendingTagInput() {
+	var tagInput = document.getElementById("tag-text-input");
+	if (tagInput && tagInput.value.trim().length > 0) {
+		var val = tagInput.value.trim().replace(/^,+|,+$/g, "");
 		if (val.length > 0) {
 			addTag(val);
-			this.value = "";
+			tagInput.value = "";
 		}
-	});
+	}
 }
 
 function addTag(text) {

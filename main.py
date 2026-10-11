@@ -80,19 +80,95 @@ def export_to_text(data: List[List[Union[str, float]]]) -> str:
     return buf.getvalue()
 
 
-def find_compounds(query: str) -> Optional[List[List[Union[str, float]]]]:
-    """Search compounds from PostgreSQL matching query in trivial name or SMILES."""
-    if not query or not DB_STRING:
+CLUSTER_COLUMNS = [
+    "cluster_akt_pi3k_mtor",
+    "cluster_aurora",
+    "cluster_bet",
+    "cluster_dna_synthesis",
+    "cluster_hdac",
+    "cluster_hsp90",
+    "cluster_l_ch",
+    "cluster_mitostress",
+    "cluster_na_k_atpase",
+    "cluster_protein_synthesis",
+    "cluster_pyrimidine_synthesis",
+    "cluster_tubulin",
+    "cluster_uncoupling",
+]
+
+CLUSTER_DISPLAY_NAMES = {
+    "cluster_akt_pi3k_mtor": "AKT/PI3K/MTOR",
+    "cluster_aurora": "Aurora Kinases",
+    "cluster_bet": "BET",
+    "cluster_dna_synthesis": "DNA synthesis",
+    "cluster_hdac": "HDAC",
+    "cluster_hsp90": "HSP90",
+    "cluster_l_ch": "L/CH",
+    "cluster_mitostress": "MitoStress",
+    "cluster_na_k_atpase": "Na+/K+ ATPase",
+    "cluster_protein_synthesis": "Protein synthesis",
+    "cluster_pyrimidine_synthesis": "Pyrimidine synthesis",
+    "cluster_tubulin": "Tubulin",
+    "cluster_uncoupling": "Uncoupling",
+}
+
+
+def find_compounds(
+    query: Optional[str] = None,
+    substances: Optional[List[str]] = None,
+    thresholds: Optional[dict] = None,
+    skip_svg: bool = False,
+) -> Optional[List[List[Union[str, float]]]]:
+    """Search compounds from PostgreSQL matching query/substances and cluster thresholds."""
+    if not DB_STRING:
         return None
 
-    query_param = f"%{query.strip()}%"
-    sql = """
+    conditions = []
+    params: List[Union[str, float]] = []
+
+    # 1. Multi-substance filtering (Option A)
+    if substances and len(substances) > 0:
+        sub_clauses = []
+        for s in substances:
+            sub_clauses.append("(LOWER(c.trivial_name) LIKE LOWER(%s) OR LOWER(c.smiles) LIKE LOWER(%s))")
+            params.extend([f"%{s.strip()}%", f"%{s.strip()}%"])
+        if sub_clauses:
+            conditions.append("(" + " OR ".join(sub_clauses) + ")")
+
+    # 2. Single text query fallback (standard search)
+    elif query and query.strip():
+        conditions.append("(LOWER(c.trivial_name) LIKE LOWER(%s) OR LOWER(c.smiles) LIKE LOWER(%s))")
+        q = f"%{query.strip()}%"
+        params.extend([q, q])
+
+    # 3. Cluster threshold filtering (Option B: c.<cluster> >= threshold)
+    if thresholds:
+        for col_name, thresh_val in thresholds.items():
+            if col_name in CLUSTER_COLUMNS:
+                conditions.append(f"c.{col_name} >= %s")
+                params.append(float(thresh_val))
+
+    # If neither query, substances, nor thresholds are provided, return early
+    if not conditions:
+        return None
+
+    where_clause = " WHERE " + " AND ".join(conditions)
+
+    # 4. Structure SVG selection (Option C: skip_svg)
+    if skip_svg:
+        svg_select = "'' AS svg"
+        join_clause = ""
+    else:
+        svg_select = "cs.svg"
+        join_clause = "LEFT JOIN compound_structures cs ON c.smiles = cs.smiles"
+
+    sql = f"""
         SELECT
             c.trivial_name,
             c.smiles,
             c.batch_no,
             c.conc_um,
-            cs.svg,
+            {svg_select},
             c.relative_cell_count,
             c.induction,
             c.cluster_akt_pi3k_mtor,
@@ -109,8 +185,8 @@ def find_compounds(query: str) -> Optional[List[List[Union[str, float]]]]:
             c.cluster_tubulin,
             c.cluster_uncoupling
         FROM compounds c
-        LEFT JOIN compound_structures cs ON c.smiles = cs.smiles
-        WHERE LOWER(c.trivial_name) LIKE LOWER(%s) OR LOWER(c.smiles) LIKE LOWER(%s)
+        {join_clause}
+        {where_clause}
         ORDER BY c.batch_no, c.conc_um;
     """
 
@@ -122,7 +198,7 @@ def find_compounds(query: str) -> Optional[List[List[Union[str, float]]]]:
             conn = psycopg2.connect(DB_STRING)
 
         with conn.cursor() as cur:
-            cur.execute(sql, (query_param, query_param))
+            cur.execute(sql, tuple(params))
             rows = cur.fetchall()
 
         if not rows:
@@ -160,8 +236,31 @@ def search():
     start = time.time()
     inp = request.form.get("nm", "").strip()
 
-    if not inp:
+    # Parse Advanced Search options
+    substances_raw = request.form.get("substances", "").strip()
+    substances = [s.strip() for s in substances_raw.split(",") if s.strip()] if substances_raw else []
+
+    # Parse cluster threshold filters
+    thresholds = {}
+    for col_name in CLUSTER_COLUMNS:
+        t_val = request.form.get(f"threshold_{col_name}")
+        if t_val is not None and t_val.strip() != "":
+            try:
+                thresholds[col_name] = float(t_val.strip())
+            except ValueError:
+                pass
+
+    # Parse skip_svg option
+    skip_svg = bool(request.form.get("skip_svg"))
+
+    # Validate that at least one filter criterion is active
+    if not inp and not substances and not thresholds:
         return redirect("/error")
+
+    # If advanced search parameters (substances or thresholds) are present,
+    # prioritize them and do not restrict by the main top input
+    if substances or thresholds:
+        inp = ""
 
     counter = session.get("count", [time.strftime("%Y-%m-%d"), 0])
     if counter[1] >= MAX_SEARCH_COUNT:
@@ -174,23 +273,55 @@ def search():
         counter[1] += 1
         session["count"] = counter
 
-    output = find_compounds(inp)
+    output = find_compounds(
+        query=inp if inp else None,
+        substances=substances if substances else None,
+        thresholds=thresholds if thresholds else None,
+        skip_svg=skip_svg,
+    )
     if not output or len(output) <= 1:
         return redirect("/error")
 
     end = time.time()
     elapsed_ms = int((end - start) * 1000)
 
+    # Determine informative display query label
+    if substances:
+        display_query = ", ".join(substances)
+        if thresholds:
+            thresh_desc = ", ".join([
+                f"{CLUSTER_DISPLAY_NAMES.get(col, col)} (≥{int(v) if v.is_integer() else v}%)"
+                for col, v in thresholds.items()
+            ])
+            display_query += f" + Cluster filter: {thresh_desc}"
+    elif thresholds:
+        # User searched purely by cluster thresholds
+        thresh_desc = ", ".join([
+            f"{CLUSTER_DISPLAY_NAMES.get(col, col)} (≥{int(v) if v.is_integer() else v}%)"
+            for col, v in thresholds.items()
+        ])
+        display_query = f"Cluster filter: {thresh_desc}"
+    else:
+        display_query = inp
+
+    session["last_search"] = {
+        "query": inp if inp else None,
+        "substances": substances if substances else None,
+        "thresholds": thresholds if thresholds else None,
+        "skip_svg": True,  # Text export never needs SVG
+        "display_name": display_query,
+    }
+
     return render_template(
         "main.html",
         output=output,
         counter=len(output),
-        query=inp,
+        query=display_query,
         tmpfile_url="",
         max_reached=False,
         results_length=len(output) - 1,
         elapsed_ms=elapsed_ms,
-        fname=inp,
+        fname=display_query,
     )
 
 
@@ -205,10 +336,21 @@ def download(fname: Optional[str] = None):
         query = query[:-4]
     query = query.strip()
 
-    if not query:
-        return redirect("/")
+    last_search = session.get("last_search")
+    if last_search and (not query or query == last_search.get("display_name")):
+        results = find_compounds(
+            query=last_search.get("query"),
+            substances=last_search.get("substances"),
+            thresholds=last_search.get("thresholds"),
+            skip_svg=True,
+        )
+        safe_filename = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in last_search.get("display_name", "search_results")) or "search_results"
+    else:
+        if not query:
+            return redirect("/")
+        results = find_compounds(query=query, skip_svg=True)
+        safe_filename = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in query) or "search_results"
 
-    results = find_compounds(query)
     if not results or len(results) <= 1:
         return redirect("/error")
 
