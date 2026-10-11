@@ -88,14 +88,30 @@ def find_compounds(query: str) -> Optional[List[List[Union[str, float]]]]:
     query_param = f"%{query.strip()}%"
     sql = """
         SELECT
-            trivial_name, smiles, batch_no, conc_um, structure, relative_cell_count,
-            induction, cluster_akt_pi3k_mtor, cluster_aurora, cluster_bet,
-            cluster_dna_synthesis, cluster_hdac, cluster_hsp90, cluster_l_ch,
-            cluster_mitostress, cluster_na_k_atpase, cluster_protein_synthesis,
-            cluster_pyrimidine_synthesis, cluster_tubulin, cluster_uncoupling
-        FROM compounds
-        WHERE LOWER(trivial_name) LIKE LOWER(%s) OR LOWER(smiles) LIKE LOWER(%s)
-        ORDER BY batch_no, conc_um;
+            c.trivial_name,
+            c.smiles,
+            c.batch_no,
+            c.conc_um,
+            cs.svg,
+            c.relative_cell_count,
+            c.induction,
+            c.cluster_akt_pi3k_mtor,
+            c.cluster_aurora,
+            c.cluster_bet,
+            c.cluster_dna_synthesis,
+            c.cluster_hdac,
+            c.cluster_hsp90,
+            c.cluster_l_ch,
+            c.cluster_mitostress,
+            c.cluster_na_k_atpase,
+            c.cluster_protein_synthesis,
+            c.cluster_pyrimidine_synthesis,
+            c.cluster_tubulin,
+            c.cluster_uncoupling
+        FROM compounds c
+        LEFT JOIN compound_structures cs ON c.smiles = cs.smiles
+        WHERE LOWER(c.trivial_name) LIKE LOWER(%s) OR LOWER(c.smiles) LIKE LOWER(%s)
+        ORDER BY c.batch_no, c.conc_um;
     """
 
     conn = None
@@ -239,4 +255,4 @@ def reset():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8081))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=True)

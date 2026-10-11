@@ -5,16 +5,113 @@
 	<!-- Results Toolbar -->
 	<div class="results-toolbar">
 		<div class="toolbar-top">
-			<form action="/search" method="post" class="mini-search-box">
+			<form action="/search" method="post" class="mini-search-box" id="results-search-form">
 				<div class="search-form-group">
 					<div class="search-input-wrapper">
 						<svg class="search-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<circle cx="11" cy="11" r="8"></circle>
 							<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
 						</svg>
-						<input class="ui-input" type="text" name="nm" placeholder="Search compound or SMILES..." required id="compound-search-input">
+						<input class="ui-input" type="text" name="nm" placeholder="Search compound or SMILES..." value="{{ query or '' }}" required id="compound-search-input">
 					</div>
 					<button class="ui-button-primary" type="submit">Search</button>
+					<button type="button" class="adv-search-toggle-btn" id="adv-search-toggle-btn" onclick="toggleAdvancedSearch()" aria-expanded="false" title="Expand advanced search options">
+						<svg class="adv-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<line x1="4" y1="21" x2="4" y2="14"></line>
+							<line x1="4" y1="10" x2="4" y2="3"></line>
+							<line x1="12" y1="21" x2="12" y2="12"></line>
+							<line x1="12" y1="8" x2="12" y2="3"></line>
+							<line x1="20" y1="21" x2="20" y2="16"></line>
+							<line x1="20" y1="12" x2="20" y2="3"></line>
+							<line x1="1" y1="14" x2="7" y2="14"></line>
+							<line x1="9" y1="8" x2="15" y2="8"></line>
+							<line x1="17" y1="16" x2="23" y2="16"></line>
+						</svg>
+						<span class="adv-toggle-label">Advanced</span>
+						<svg class="adv-chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<polyline points="6 9 12 15 18 9"></polyline>
+						</svg>
+					</button>
+				</div>
+
+				<!-- Advanced Search Expandable Panel for Results View -->
+				<div class="adv-search-panel hidden" id="adv-search-panel">
+					<div class="adv-panel-inner">
+						<div class="adv-panel-header">
+							<div class="adv-panel-title-group">
+								<span class="adv-badge">Optional</span>
+								<h3 class="adv-panel-title">Advanced Search Filters</h3>
+							</div>
+							<p class="adv-panel-desc">Combine multi-substance matching with bioactivity cluster similarity thresholds.</p>
+						</div>
+
+						<!-- Option A: Multi-Substance Tag Input -->
+						<div class="adv-field-group">
+							<div class="adv-field-header">
+								<label class="adv-field-label">Multi-Substance Search</label>
+								<span class="adv-field-hint">Type substance name and press <kbd>,</kbd> or <kbd>Enter</kbd></span>
+							</div>
+							<div class="tag-input-container" id="tag-input-box" onclick="focusTagInput()">
+								<div class="tags-list" id="tags-list"></div>
+								<input type="text" class="tag-bare-input" id="tag-text-input" placeholder="e.g. Centrocountin 1, Taxol, Vorinostat...">
+							</div>
+							<input type="hidden" name="substances" id="substances-hidden">
+						</div>
+
+						<!-- Option B: Bioactivity Clusters with Thresholds -->
+						<div class="adv-field-group">
+							<div class="adv-field-header">
+								<label class="adv-field-label">Bioactivity Cluster Thresholds</label>
+								<span class="adv-field-hint">Substances must have cluster similarity &ge; threshold</span>
+							</div>
+
+							<div class="cluster-filters-grid" id="cluster-filters-grid">
+								{% set clusters = [
+									('cluster_akt_pi3k_mtor', 'AKT / PI3K / MTOR'),
+									('cluster_aurora', 'Aurora Kinases'),
+									('cluster_bet', 'BET'),
+									('cluster_dna_synthesis', 'DNA Synthesis'),
+									('cluster_hdac', 'HDAC'),
+									('cluster_hsp90', 'HSP90'),
+									('cluster_l_ch', 'L/CH (Lysosomotropism)'),
+									('cluster_mitostress', 'MitoStress'),
+									('cluster_na_k_atpase', 'Na+/K+ ATPase'),
+									('cluster_protein_synthesis', 'Protein Synthesis'),
+									('cluster_pyrimidine_synthesis', 'Pyrimidine Synthesis'),
+									('cluster_tubulin', 'Tubulin'),
+									('cluster_uncoupling', 'Uncoupling')
+								] %}
+								{% for id_key, label_name in clusters %}
+								<div class="cluster-filter-card" id="card-{{ id_key }}">
+									<label class="cluster-check-label">
+										<input type="checkbox" class="cluster-filter-check" data-cluster="{{ id_key }}" onchange="toggleClusterFilter('{{ id_key }}', this.checked)">
+										<span class="cluster-check-custom"></span>
+										<span class="cluster-check-text">{{ label_name }}</span>
+									</label>
+									<div class="cluster-threshold-ctrl hidden" id="ctrl-{{ id_key }}">
+										<div class="threshold-slider-row">
+											<span class="threshold-symbol">&ge;</span>
+											<input type="range" class="threshold-slider" min="50" max="100" step="1" value="80" oninput="updateThresholdVal('{{ id_key }}', this.value)">
+											<span class="threshold-val-box" id="val-{{ id_key }}">80%</span>
+										</div>
+										<input type="hidden" name="threshold_{{ id_key }}" id="input-{{ id_key }}" value="" disabled>
+									</div>
+								</div>
+								{% endfor %}
+							</div>
+						</div>
+
+						<!-- Advanced Search Footer Actions -->
+						<div class="adv-panel-footer">
+							<div class="adv-footer-left">
+								<button type="button" class="adv-reset-btn" onclick="resetAdvancedFilters()">Reset Filters</button>
+							</div>
+							<div class="adv-footer-right">
+								<button type="button" class="adv-cancel-btn" onclick="toggleAdvancedSearch(false)">Collapse</button>
+								<button type="submit" class="ui-button-primary">Apply &amp; Search</button>
+							</div>
+						</div>
+					</div>
 				</div>
 			</form>
 
@@ -180,20 +277,20 @@
 
 							{% if val is number %}
 								{% if val > 95 %}
-									<div class="value cluster-value nf {{ row_class }}">
-										<span class="val-number">{{ val | round | int }}</span>
+									<div class="value cluster-value {{ row_class }}">
+										<span class="cluster-badge nf val-number">{{ val | round | int }}</span>
 									</div>
 								{% elif val > 90 %}
-									<div class="value cluster-value nt {{ row_class }}">
-										<span class="val-number">{{ val | round | int }}</span>
+									<div class="value cluster-value {{ row_class }}">
+										<span class="cluster-badge nt val-number">{{ val | round | int }}</span>
 									</div>
 								{% elif val > 85 %}
-									<div class="value cluster-value ef {{ row_class }}">
-										<span class="val-number">{{ val | round | int }}</span>
+									<div class="value cluster-value {{ row_class }}">
+										<span class="cluster-badge ef val-number">{{ val | round | int }}</span>
 									</div>
 								{% elif val > 80 %}
-									<div class="value cluster-value et {{ row_class }}">
-										<span class="val-number">{{ val | round | int }}</span>
+									<div class="value cluster-value {{ row_class }}">
+										<span class="cluster-badge et val-number">{{ val | round | int }}</span>
 									</div>
 								{% else %}
 									<div class="value cluster-value {{ row_class }}">
