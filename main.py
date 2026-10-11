@@ -130,14 +130,14 @@ def find_compounds(
     if substances and len(substances) > 0:
         sub_clauses = []
         for s in substances:
-            sub_clauses.append("(LOWER(c.trivial_name) LIKE LOWER(%s) OR LOWER(c.smiles) LIKE LOWER(%s))")
+            sub_clauses.append("(LOWER(COALESCE(c.trivial_name, 'Unnamed Compound')) LIKE LOWER(%s) OR LOWER(COALESCE(c.smiles, '')) LIKE LOWER(%s))")
             params.extend([f"%{s.strip()}%", f"%{s.strip()}%"])
         if sub_clauses:
             conditions.append("(" + " OR ".join(sub_clauses) + ")")
 
     # 2. Single text query fallback (standard search)
     elif query and query.strip():
-        conditions.append("(LOWER(c.trivial_name) LIKE LOWER(%s) OR LOWER(c.smiles) LIKE LOWER(%s))")
+        conditions.append("(LOWER(COALESCE(c.trivial_name, 'Unnamed Compound')) LIKE LOWER(%s) OR LOWER(COALESCE(c.smiles, '')) LIKE LOWER(%s))")
         q = f"%{query.strip()}%"
         params.extend([q, q])
 
@@ -164,7 +164,7 @@ def find_compounds(
 
     sql = f"""
         SELECT
-            c.trivial_name,
+            COALESCE(NULLIF(TRIM(c.trivial_name), ''), 'Unnamed Compound') AS trivial_name,
             c.smiles,
             c.batch_no,
             c.conc_um,
@@ -207,6 +207,8 @@ def find_compounds(
         matching_rows: List[List[Union[str, float]]] = []
         for row in rows:
             clean_row = [_sanitize_db_value(val) for val in row]
+            if not clean_row[0] or str(clean_row[0]).strip() == "":
+                clean_row[0] = "Unnamed Compound"
             matching_rows.append(clean_row)
 
         output: List[List[Union[str, float]]] = [list(DATASET_HEADER)]

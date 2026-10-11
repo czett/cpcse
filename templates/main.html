@@ -226,7 +226,7 @@
 
 								{% if r == 0 %}
 									<div class="value first-data-cell {{ row_class }}">
-										<span>{{ val }}</span>
+										<span>{{ val or "Unnamed Compound" }}</span>
 									</div>
 								{% elif r == 1 %}
 									<div class="value smile {{ row_class }}" onclick="copySmile('{{ val | replace("'", "\\'") }}', this)" title="Click to copy SMILES">
@@ -345,7 +345,7 @@
 			{% set col = output[col_idx] %}
 			<div class="mobile-compound-card">
 				<div class="mobile-card-header">
-					<h3 class="mobile-compound-title">{{ col[0] }}</h3>
+					<h3 class="mobile-compound-title">{{ col[0] or "Unnamed Compound" }}</h3>
 					<div class="mobile-header-badges">
 						<span class="mobile-batch-badge">Batch {{ col[2] if col[2] is not number else (col[2] | round | int) }}</span>
 						<span class="mobile-conc-badge">
@@ -361,7 +361,7 @@
 				</div>
 
 				{% if not skip_svg %}
-				{% set is_duplicate_compound = (col_idx > 1 and (col[0] == output[col_idx - 1][0] or col[1] == output[col_idx - 1][1])) %}
+				{% set is_duplicate_compound = (col_idx > 1 and col[1] == output[col_idx - 1][1]) %}
 				<div class="mobile-structure-box{% if is_duplicate_compound %} is-collapsed{% endif %}">
 					{% if is_duplicate_compound %}
 						<details class="structure-accordion">
