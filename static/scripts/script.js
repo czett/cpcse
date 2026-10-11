@@ -205,24 +205,32 @@ function focusTagInput() {
 
 function initTagInput() {
 	var tagInput = document.getElementById("tag-text-input");
-	if (!tagInput) return;
+	var hiddenSubstances = document.getElementById("substances-hidden");
 
-	tagInput.addEventListener("keydown", function(e) {
-		if (e.key === "," || e.key === "Enter" || e.key === "Tab") {
-			var val = this.value.trim().replace(/^,+|,+$/g, "");
-			if (val.length > 0) {
-				e.preventDefault();
-				addTag(val);
-				this.value = "";
+	// Preload existing substances from template if present
+	if (hiddenSubstances && hiddenSubstances.value.trim().length > 0) {
+		substancesList = hiddenSubstances.value.split(",").map(function(s) { return s.trim(); }).filter(Boolean);
+		renderTags();
+	}
+
+	if (tagInput) {
+		tagInput.addEventListener("keydown", function(e) {
+			if (e.key === "," || e.key === "Enter" || e.key === "Tab") {
+				var val = this.value.trim().replace(/^,+|,+$/g, "");
+				if (val.length > 0) {
+					e.preventDefault();
+					addTag(val);
+					this.value = "";
+				}
+			} else if (e.key === "Backspace" && this.value === "" && substancesList.length > 0) {
+				removeTag(substancesList.length - 1);
 			}
-		} else if (e.key === "Backspace" && this.value === "" && substancesList.length > 0) {
-			removeTag(substancesList.length - 1);
-		}
-	});
+		});
 
-	tagInput.addEventListener("blur", function() {
-		flushPendingTagInput();
-	});
+		tagInput.addEventListener("blur", function() {
+			flushPendingTagInput();
+		});
+	}
 
 	// Before any search form submission, handle strict state isolation between Basic and Advanced search
 	var searchForms = document.querySelectorAll("form[action='/search']");
@@ -236,21 +244,53 @@ function initTagInput() {
 				// ADVANCED SEARCH MODE:
 				flushPendingTagInput();
 
-				var hiddenSubstances = document.getElementById("substances-hidden");
-				var hasSubstances = hiddenSubstances && hiddenSubstances.value.trim().length > 0;
-				var activeThresholdInputs = form.querySelectorAll(".cluster-threshold-ctrl:not(.hidden) input[type='hidden']:not(:disabled)");
-				var hasThresholds = activeThresholdInputs.length > 0;
+				// Evaluate substance pills
+				var hasSubstances = (typeof substancesList !== "undefined" && substancesList.length > 0);
+				var hiddenSubstancesInput = document.getElementById("substances-hidden");
+				if (!hasSubstances && hiddenSubstancesInput && hiddenSubstancesInput.value.trim().length > 0) {
+					hasSubstances = true;
+				}
 
-				// A query is valid if substances are present, or cluster thresholds are active, or both
+				// Evaluate active cluster thresholds accurately across document
+				var checkedClusterBoxes = document.querySelectorAll(".cluster-filter-check:checked");
+				var hasThresholds = checkedClusterBoxes.length > 0;
+
+				// Synchronize checked cluster hidden inputs with current slider values
+				checkedClusterBoxes.forEach(function(chk) {
+					var key = chk.getAttribute("data-cluster");
+					var input = document.getElementById("input-" + key);
+					var ctrl = document.getElementById("ctrl-" + key);
+					var slider = ctrl ? ctrl.querySelector(".threshold-slider") : null;
+					if (input) {
+						input.disabled = false;
+						if (!input.value) {
+							input.value = slider ? slider.value : "80";
+						}
+					}
+				});
+
+				// Disable any unchecked cluster inputs
+				var uncheckedClusterBoxes = document.querySelectorAll(".cluster-filter-check:not(:checked)");
+				uncheckedClusterBoxes.forEach(function(chk) {
+					var key = chk.getAttribute("data-cluster");
+					var input = document.getElementById("input-" + key);
+					if (input) {
+						input.disabled = true;
+						input.value = "";
+					}
+				});
+
+				// A query is valid if: >=1 substance pill OR >=1 cluster threshold active (or both).
+				// Only block submission if BOTH conditions fail.
 				if (!hasSubstances && !hasThresholds) {
 					e.preventDefault();
 					showToast("Add at least one substance pill or activate a cluster threshold");
-					var tagInput = document.getElementById("tag-text-input");
-					if (tagInput) tagInput.focus();
+					var tagBoxInput = document.getElementById("tag-text-input");
+					if (tagBoxInput) tagBoxInput.focus();
 					return false;
 				}
 
-				// Strict isolation: clear top search bar input so it does not bleed into advanced search
+				// Strict isolation: clear top search bar input so no synthetic string is submitted or shown
 				if (mainInput) {
 					mainInput.removeAttribute("required");
 					mainInput.value = "";

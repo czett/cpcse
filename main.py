@@ -304,6 +304,24 @@ def search():
     else:
         display_query = inp
 
+    active_filters = []
+    if substances:
+        for s in substances:
+            active_filters.append({"type": "substance", "label": s})
+    if thresholds:
+        for col, v in thresholds.items():
+            cname = CLUSTER_DISPLAY_NAMES.get(col, col)
+            val_fmt = int(v) if v.is_integer() else v
+            active_filters.append({
+                "type": "cluster",
+                "key": col,
+                "label": f"{cname} ≥ {val_fmt}%",
+                "cluster_name": cname,
+                "val": val_fmt,
+            })
+
+    active_filter_count = len(active_filters)
+
     session["last_search"] = {
         "query": inp if inp else None,
         "substances": substances if substances else None,
@@ -316,7 +334,13 @@ def search():
         "main.html",
         output=output,
         counter=len(output),
-        query=display_query,
+        search_query=inp,
+        display_query=display_query,
+        active_filters=active_filters,
+        active_filter_count=active_filter_count,
+        substances=substances,
+        thresholds=thresholds,
+        skip_svg=skip_svg,
         tmpfile_url="",
         max_reached=False,
         results_length=len(output) - 1,

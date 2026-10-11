@@ -383,6 +383,81 @@ html, body {
     font-weight: 600;
 }
 
+.adv-search-toggle-btn.has-filters {
+    border-color: #93c5fd;
+    background: #f8faff;
+    color: #1d4ed8;
+}
+
+.adv-filter-count-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    margin-left: 2px;
+}
+
+/* Active Filter Chips Bar (Directly below search input) */
+.active-filter-chips-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-chips-caption {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.filter-chips-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.active-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    line-height: 1.4;
+}
+
+.chip-filter-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--primary-blue);
+}
+
+.chip-filter-text {
+    white-space: nowrap;
+}
+
+.filter-clear-all-link {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    margin-left: 2px;
+    cursor: pointer;
+}
+
+.filter-clear-all-link:hover {
+    color: #dc2626;
+}
+
 .adv-toggle-icon {
     color: var(--muted-foreground);
     transition: color 0.15s ease;

@@ -12,10 +12,10 @@
 							<circle cx="11" cy="11" r="8"></circle>
 							<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
 						</svg>
-						<input class="ui-input" type="text" name="nm" placeholder="Search compound or SMILES..." value="{{ query or '' }}" required id="compound-search-input">
+						<input class="ui-input" type="text" name="nm" placeholder="Search compound or SMILES..." value="{{ search_query or '' }}" required id="compound-search-input">
 					</div>
 					<button class="ui-button-primary" type="submit">Search</button>
-					<button type="button" class="adv-search-toggle-btn" id="adv-search-toggle-btn" onclick="toggleAdvancedSearch()" aria-expanded="false" title="Expand advanced search options">
+					<button type="button" class="adv-search-toggle-btn{% if active_filter_count and active_filter_count > 0 %} has-filters{% endif %}" id="adv-search-toggle-btn" onclick="toggleAdvancedSearch()" aria-expanded="false" title="Expand advanced search options">
 						<svg class="adv-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<line x1="4" y1="21" x2="4" y2="14"></line>
 							<line x1="4" y1="10" x2="4" y2="3"></line>
@@ -27,12 +27,26 @@
 							<line x1="9" y1="8" x2="15" y2="8"></line>
 							<line x1="17" y1="16" x2="23" y2="16"></line>
 						</svg>
-						<span class="adv-toggle-label">Advanced</span>
+						<span class="adv-toggle-label">Advanced{% if active_filter_count and active_filter_count > 0 %} <span class="adv-filter-count-badge">({{ active_filter_count }})</span>{% endif %}</span>
 						<svg class="adv-chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<polyline points="6 9 12 15 18 9"></polyline>
 						</svg>
 					</button>
 				</div>
+				{% if active_filters and active_filters|length > 0 %}
+				<div class="active-filter-chips-row">
+					<span class="filter-chips-caption">Filters:</span>
+					<div class="filter-chips-wrap">
+						{% for flt in active_filters %}
+						<span class="active-filter-chip">
+							<span class="chip-filter-dot"></span>
+							<span class="chip-filter-text">{{ flt.label }}</span>
+						</span>
+						{% endfor %}
+						<a href="/" class="filter-clear-all-link">Clear all</a>
+					</div>
+				</div>
+				{% endif %}
 			</form>
 
 			<div class="toolbar-actions">
@@ -42,8 +56,8 @@
 					<button type="button" class="view-toggle-btn" id="btn-cards-view" onclick="setResultsView('cards')">Cards</button>
 				</div>
 
-				{% if fname or query %}
-				<a href="{{ url_for('download', q=fname or query) }}" class="ui-button-secondary download-btn">
+				{% if output and output|length > 1 %}
+				<a href="{{ url_for('download') }}" class="ui-button-secondary download-btn">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
 						<polyline points="7 10 12 15 17 10"></polyline>
@@ -73,7 +87,7 @@
 						<div class="tags-list" id="tags-list"></div>
 						<input type="text" class="tag-bare-input" id="tag-text-input" placeholder="Type compound or SMILES and press comma...">
 					</div>
-					<input type="hidden" name="substances" id="substances-hidden" form="results-search-form">
+					<input type="hidden" name="substances" id="substances-hidden" value="{{ substances | join(',') if substances else '' }}" form="results-search-form">
 				</div>
 
 				<!-- Option B: Bioactivity Clusters with Thresholds -->
@@ -100,19 +114,21 @@
 							('cluster_uncoupling', 'Uncoupling')
 						] %}
 						{% for id_key, label_name in clusters %}
-						<div class="cluster-filter-card" id="card-{{ id_key }}">
+						{% set is_active = thresholds and id_key in thresholds %}
+						{% set active_val = thresholds[id_key] | round | int if is_active else 80 %}
+						<div class="cluster-filter-card{% if is_active %} is-active{% endif %}" id="card-{{ id_key }}">
 							<label class="cluster-check-label">
-								<input type="checkbox" class="cluster-filter-check" data-cluster="{{ id_key }}" onchange="toggleClusterFilter('{{ id_key }}', this.checked)">
+								<input type="checkbox" class="cluster-filter-check" data-cluster="{{ id_key }}" onchange="toggleClusterFilter('{{ id_key }}', this.checked)"{% if is_active %} checked{% endif %}>
 								<span class="cluster-check-custom"></span>
 								<span class="cluster-check-text">{{ label_name }}</span>
 							</label>
-							<div class="cluster-threshold-ctrl hidden" id="ctrl-{{ id_key }}">
+							<div class="cluster-threshold-ctrl{% if not is_active %} hidden{% endif %}" id="ctrl-{{ id_key }}">
 								<div class="threshold-slider-row">
 									<span class="threshold-symbol">&ge;</span>
-									<input type="range" class="threshold-slider" min="50" max="100" step="1" value="80" oninput="updateThresholdVal('{{ id_key }}', this.value)">
-									<span class="threshold-val-box" id="val-{{ id_key }}">80%</span>
+									<input type="range" class="threshold-slider" min="50" max="100" step="1" value="{{ active_val }}" oninput="updateThresholdVal('{{ id_key }}', this.value)">
+									<span class="threshold-val-box" id="val-{{ id_key }}">{{ active_val }}%</span>
 								</div>
-								<input type="hidden" name="threshold_{{ id_key }}" id="input-{{ id_key }}" value="" disabled form="results-search-form">
+								<input type="hidden" name="threshold_{{ id_key }}" id="input-{{ id_key }}" value="{{ active_val if is_active else '' }}"{% if not is_active %} disabled{% endif %} form="results-search-form">
 							</div>
 						</div>
 						{% endfor %}
@@ -122,7 +138,7 @@
 				<!-- Option C: Rendering Options (Skip SVG Structure) -->
 				<div class="adv-field-group">
 					<label class="adv-checkbox-option">
-						<input type="checkbox" name="skip_svg" id="skip-svg-check" value="1" class="adv-option-check" form="results-search-form">
+						<input type="checkbox" name="skip_svg" id="skip-svg-check" value="1" class="adv-option-check"{% if skip_svg %} checked{% endif %} form="results-search-form">
 						<span class="adv-checkbox-label">
 							<strong>Skip 2D chemical structure rendering</strong>
 							<span class="adv-checkbox-desc">Faster load time by omitting SVG chemical structures from results</span>
