@@ -33,20 +33,6 @@
 						</svg>
 					</button>
 				</div>
-				{% if active_filters and active_filters|length > 0 %}
-				<div class="active-filter-chips-row">
-					<span class="filter-chips-caption">Filters:</span>
-					<div class="filter-chips-wrap">
-						{% for flt in active_filters %}
-						<span class="active-filter-chip">
-							<span class="chip-filter-dot"></span>
-							<span class="chip-filter-text">{{ flt.label }}</span>
-						</span>
-						{% endfor %}
-						<a href="/" class="filter-clear-all-link">Clear all</a>
-					</div>
-				</div>
-				{% endif %}
 			</form>
 
 			<div class="toolbar-actions">
@@ -68,6 +54,21 @@
 				{% endif %}
 			</div>
 		</div>
+
+		{% if active_filters and active_filters|length > 0 %}
+		<div class="active-filter-chips-row">
+			<span class="filter-chips-caption">Filters:</span>
+			<div class="filter-chips-wrap">
+				{% for flt in active_filters %}
+				<span class="active-filter-chip">
+					<span class="chip-filter-dot"></span>
+					<span class="chip-filter-text">{{ flt.label }}</span>
+				</span>
+				{% endfor %}
+				<a href="/" class="filter-clear-all-link">Clear all</a>
+			</div>
+		</div>
+		{% endif %}
 
 		<!-- Advanced Search Expandable Panel for Results View -->
 		<div class="adv-search-panel hidden" id="adv-search-panel">
@@ -192,6 +193,7 @@
 					<div class="matrix-table" id="metadata-table" style="--col-count: {{ (output|length - 1) if output else 1 }};">
 					{% if output and output|length > 0 %}
 						{% for r in range(7) %}
+							{% if not (skip_svg and r == 4) %}
 							{% if r == 0 %}{% set row_class = 'row-name' %}
 							{% elif r == 1 %}{% set row_class = 'row-smiles' %}
 							{% elif r == 2 %}{% set row_class = 'row-batch' %}
@@ -273,6 +275,7 @@
 									</div>
 								{% endif %}
 							{% endfor %}
+							{% endif %}
 						{% endfor %}
 					{% endif %}
 				</div>
@@ -357,6 +360,7 @@
 					<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy">
 				</div>
 
+				{% if not skip_svg %}
 				{% set is_duplicate_compound = (col_idx > 1 and (col[0] == output[col_idx - 1][0] or col[1] == output[col_idx - 1][1])) %}
 				<div class="mobile-structure-box{% if is_duplicate_compound %} is-collapsed{% endif %}">
 					{% if is_duplicate_compound %}
@@ -381,6 +385,7 @@
 						{% endif %}
 					{% endif %}
 				</div>
+				{% endif %}
 
 				<!-- Compound Metadata (Relative cell count & Induction) -->
 				<div class="mobile-metadata-grid">
