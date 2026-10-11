@@ -356,7 +356,6 @@ html, body {
    ========================================================================== */
 
 .adv-search-toggle-btn {
-    display: none !important;
     background: var(--card);
     border: 1px solid var(--border);
     color: var(--card-foreground);
@@ -404,7 +403,6 @@ html, body {
 }
 
 .adv-search-panel {
-    display: none !important;
     margin-top: 18px;
     background: #fbfcfe;
     border: 1px solid var(--border);
@@ -687,6 +685,56 @@ html, body {
     text-align: center;
 }
 
+/* Rendering Option Checkbox */
+.adv-checkbox-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.adv-checkbox-option:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.adv-checkbox-option:has(.adv-option-check:checked) {
+    border-color: var(--primary-blue);
+    background: #eff6ff;
+}
+
+.adv-option-check {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    accent-color: var(--primary-blue);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.adv-checkbox-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.adv-checkbox-label strong {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--card-foreground);
+}
+
+.adv-checkbox-desc {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+}
+
 /* Advanced Search Footer Actions */
 .adv-panel-footer {
     display: flex;
@@ -908,12 +956,6 @@ html, body {
 .mini-search-box {
     flex: 1;
     min-width: 280px;
-    max-width: 600px;
-}
-
-.mini-search-box:has(.adv-search-panel:not(.hidden)) {
-    max-width: 100%;
-    width: 100%;
 }
 
 .toolbar-actions {

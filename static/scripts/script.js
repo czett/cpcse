@@ -310,4 +310,8 @@ function resetAdvancedFilters() {
 		var key = chk.getAttribute("data-cluster");
 		if (key) toggleClusterFilter(key, false);
 	});
+
+	// 3. Uncheck skip SVG rendering option
+	var skipCheck = document.getElementById("skip-svg-check");
+	if (skipCheck) skipCheck.checked = false;
 }
