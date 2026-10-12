@@ -111,7 +111,7 @@ def find_compounds(query: str) -> Optional[List[List[Union[str, float]]]]:
         FROM compounds c
         LEFT JOIN compound_structures cs ON c.smiles = cs.smiles
         WHERE LOWER(c.trivial_name) LIKE LOWER(%s) OR LOWER(c.smiles) LIKE LOWER(%s)
-        ORDER BY c.batch_no, c.conc_um;
+        ORDER BY c.ctid;
     """
 
     conn = None
