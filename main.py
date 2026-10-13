@@ -230,6 +230,11 @@ def contact():
     return render_template("contact.html")
 
 
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+
 @app.route("/versions")
 def versions():
     return render_template("versions.html")

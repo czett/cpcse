@@ -90,7 +90,7 @@ html, body {
 }
 
 .nav-logo {
-    height: 38px;
+    height: 3rem;
     width: auto;
     object-fit: contain;
 }
@@ -109,6 +109,9 @@ html, body {
     padding: 8px 16px;
     border-radius: 6px;
     transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .navbar-menu .nav-link:hover {
@@ -128,8 +131,8 @@ html, body {
     color: #e4e4e7;
     font-size: 0.75rem;
     font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 12px;
+    padding: .3rem .75rem;
+    border-radius: 1rem;
 }
 
 .mobileonly {
@@ -1014,7 +1017,7 @@ html, body {
 .matrix-results-group {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 32px;
     width: max-content;
     min-width: 100%;
 }
@@ -1029,14 +1032,80 @@ html, body {
 .section-eyebrow {
     position: sticky;
     left: 2px;
-    font-size: 11px;
+    font-size: 0.9375rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
     color: var(--muted-foreground, #64748b);
     padding-left: 2px;
     user-select: none;
     align-self: flex-start;
+}
+
+/* Eyebrow row: first label over the header column, second over the first data column */
+.section-eyebrow-row {
+    display: flex;
+    align-items: baseline;
+}
+
+.section-eyebrow-row .section-eyebrow:first-child {
+    flex: 0 0 231px; /* 1px container border + 230px header column */
+    box-sizing: border-box;
+}
+
+.section-eyebrow-row .eyebrow-data-aligned {
+    position: static;
+    padding-left: 0;
+}
+
+/* Metric definitions below results */
+.metric-definitions {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 14px 18px;
+    margin-top: 16px;
+}
+
+.metric-definitions-list {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.metric-definition {
+    display: flex;
+    gap: 6px;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--muted-foreground);
+}
+
+.metric-definition dt {
+    font-weight: 600;
+    color: var(--card-foreground);
+    white-space: nowrap;
+}
+
+.metric-definition dt::after {
+    content: ":";
+}
+
+.metric-definition dd {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .section-eyebrow-row .section-eyebrow:first-child {
+        flex-basis: 141px;
+    }
+
+    .metric-definition {
+        flex-direction: column;
+        gap: 0;
+    }
 }
 
 .table-container {
@@ -1115,7 +1184,12 @@ html, body {
 .value.row-batch,
 .value.row-conc {
     height: 40px;
-    color: #334155;
+    color: var(--card-foreground);
+}
+
+.value.header-cell.row-batch,
+.value.header-cell.row-conc {
+    color: var(--muted-foreground);
 }
 
 .value.row-structure {
@@ -1132,7 +1206,7 @@ html, body {
 .value.smile {
     font-family: 'Fira Code', monospace;
     font-size: 0.8125rem;
-    color: var(--muted-foreground);
+    color: var(--card-foreground);
     cursor: pointer;
     display: flex;
     justify-content: space-between;
@@ -1212,7 +1286,28 @@ html, body {
 
 .value.cell-count-value .val-number {
     color: var(--card-foreground);
-    font-weight: 500;
+    font-weight: 400;
+}
+
+.mobile-val-badge.standard.plain {
+    font-weight: 400;
+}
+
+/* Warning highlight for Relative cell count < 50 */
+.value.cell-count-value.cell-count-warning {
+    padding: 0;
+}
+
+.cluster-badge.cell-count-badge,
+.value.cell-count-value .cluster-badge.cell-count-badge {
+    background-color: #F40B1F;
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+.mobile-val-badge.standard.warning {
+    background-color: #F40B1F !important;
+    color: #ffffff !important;
 }
 
 .value.row-cluster:not(.header-cell) {
@@ -1720,10 +1815,41 @@ html, body {
 }
 
 .footer-github-link {
-    color: var(--muted-foreground);
+    color: var(--primary-blue);
     text-decoration: none;
     font-size: inherit;
     transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.footer-cc-link {
+    display: inline-flex;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.footer-cc-icon {
+    height: 1.6em;
+    width: auto;
+    opacity: 0.75;
+    transition: opacity 0.15s ease;
+}
+
+.footer-cc-link:hover .footer-cc-icon {
+    opacity: 1;
+}
+
+.terms-license-header {
+    justify-content: space-between;
+}
+
+.terms-license-header h3 {
+    margin-bottom: 0;
+}
+
+.terms-cc-by-logo {
+    height: 44px;
+    width: auto;
+    display: block;
 }
 
 .footer-github-link:hover,
