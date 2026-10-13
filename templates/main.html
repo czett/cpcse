@@ -12,7 +12,7 @@
 							<circle cx="11" cy="11" r="8"></circle>
 							<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
 						</svg>
-						<input class="ui-input" type="text" name="nm" placeholder="Search compound or SMILES..." value="{{ query or '' }}" required id="compound-search-input">
+						<input class="ui-input" type="text" name="nm" placeholder="Search by compound name or SMILES string" value="{{ query or '' }}" required id="compound-search-input">
 					</div>
 					<button class="ui-button-primary" type="submit">Search</button>
 					<button type="button" class="adv-search-toggle-btn" id="adv-search-toggle-btn" onclick="toggleAdvancedSearch()" aria-expanded="false" title="Expand advanced search options">
@@ -232,8 +232,11 @@
 										{{ val | safe }}
 									</div>
 								{% elif r == 5 %}
-									<div class="value cell-count-value {{ row_class }}">
-										{% if val is number %}
+									{% set is_low_cell_count = (val is number and val < 50) %}
+									<div class="value cell-count-value {{ row_class }}{% if is_low_cell_count %} cell-count-warning{% endif %}">
+										{% if val is number and is_low_cell_count %}
+											<span class="cluster-badge cell-count-badge val-number">{{ val | round | int }}</span>
+										{% elif val is number %}
 											<span class="val-number">{{ val | round | int }}</span>
 										{% else %}
 											<span>{{ val }}</span>
@@ -258,7 +261,10 @@
 		<!-- Card 2: Cluster Profiles Block -->
 		{% if output and output[0]|length > 7 %}
 		<div class="matrix-card-block">
-			<div class="section-eyebrow">Bioactivity Clusters</div>
+			<div class="section-eyebrow-row">
+				<div class="section-eyebrow">Bioactivity Clusters</div>
+				<div class="section-eyebrow eyebrow-data-aligned">Cluster similarity (%)</div>
+			</div>
 			<div class="table-container" id="cluster-scroll-container">
 				<div class="matrix-table" id="cluster-table" style="--col-count: {{ (output|length - 1) if output else 1 }};">
 					{% for r in range(7, output[0]|length) %}
@@ -310,6 +316,25 @@
 		{% endif %}
 		</div>
 	</div>
+
+	{% if output and output|length > 1 %}
+	<div class="metric-definitions">
+		<dl class="metric-definitions-list">
+			<div class="metric-definition">
+				<dt>Induction (%)</dt>
+				<dd>Percentage of features significantly altered. Compounds are considered active in CPA if induction &gt; 5%.</dd>
+			</div>
+			<div class="metric-definition">
+				<dt>Relative cell count (%)</dt>
+				<dd>Cell count relative to the negative control. Compounds are flagged as toxic if cell count &lt; 50%.</dd>
+			</div>
+			<div class="metric-definition">
+				<dt>Cluster biosimilarity (%)</dt>
+				<dd>Morphological similarity to an established cluster profile. Considered similar if biosimilarity &gt; 80%.</dd>
+			</div>
+		</dl>
+	</div>
+	{% endif %}
 
 	<!-- 2. Responsive Mobile Cards View (Optional mobile card view) -->
 	{% if output and output|length > 1 %}
@@ -364,9 +389,10 @@
 						{% if row_idx < col|length %}
 							{% set metric_name = output[0][row_idx] %}
 							{% set metric_val = col[row_idx] %}
+							{% set is_low_cell_count = (row_idx == 5 and metric_val is number and metric_val < 50) %}
 							<div class="mobile-metric-item">
 								<span class="mobile-metric-label">{{ metric_name }}</span>
-								<span class="mobile-val-badge standard">{% if metric_val is number %}{{ metric_val | round | int }}{% else %}{{ metric_val }}{% endif %}</span>
+								<span class="mobile-val-badge standard{% if is_low_cell_count %} warning{% elif row_idx == 5 %} plain{% endif %}">{% if metric_val is number %}{{ metric_val | round | int }}{% else %}{{ metric_val }}{% endif %}</span>
 							</div>
 						{% endif %}
 					{% endfor %}

@@ -111,7 +111,7 @@ def find_compounds(query: str) -> Optional[List[List[Union[str, float]]]]:
         FROM compounds c
         LEFT JOIN compound_structures cs ON c.smiles = cs.smiles
         WHERE LOWER(c.trivial_name) LIKE LOWER(%s) OR LOWER(c.smiles) LIKE LOWER(%s)
-        ORDER BY c.batch_no, c.conc_um;
+        ORDER BY c.ctid;
     """
 
     conn = None
@@ -228,6 +228,11 @@ def download(fname: Optional[str] = None):
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
+
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
 
 
 @app.route("/versions")
