@@ -1,6 +1,6 @@
 # Cell Painting Cluster Subprofile Explorer (CPCSE)
 
-Web tool and database viewer for querying and comparing bioactivity cluster profiles from Cell Painting assays, developed for and maintained in collaboration with the **Max Planck Institute of Molecular Physiology (COMAS)**.
+Web tool for querying the profile similarity to predefined bioactivity clusters derived from the Cell Painting dataset from Pahl et al. (2023) *Cell Chem Biol*, DOI: [10.1016/j.chembiol.2023.06.003](https://doi.org/10.1016/j.chembiol.2023.06.003), developed and maintained by Colin Ziegler.
 
 **Live Deployment:** [cpcse-mpi.vercel.app](https://cpcse-mpi.vercel.app)
 
@@ -8,7 +8,7 @@ Web tool and database viewer for querying and comparing bioactivity cluster prof
 
 ## Overview
 
-The Subprofile Explorer provides access to 1,883 reference landmark compounds across 13 defined bioactivity clusters (including AKT/PI3K/MTOR, DNA synthesis, HDAC, MitoStress, and Tubulin).
+The Subprofile Explorer provides access to the profile similarity of 1,883 reference landmark compounds to 13 defined bioactivity clusters.
 
 ### Key Features
 - **Compound Search & Matrix View:** Query compounds by name or SMILES string and compare cluster values side by side in a structured data grid.
@@ -25,12 +25,12 @@ The Subprofile Explorer provides access to 1,883 reference landmark compounds ac
 - **Cheminformatics:** RDKit (SMILES parsing and SVG generation)
 - **Database:** PostgreSQL (Neon)
 - **Hosting:** Vercel
-- **Data Source:** Pahl et al. (2023) *Cell Chem Biol*, DOI: [10.1016/j.chembiol.2023.06.003]
+- **Data Source:** Pahl et al. (2023) *Cell Chem Biol*, DOI:  [10.1016/j.chembiol.2023.06.003](https://doi.org/10.1016/j.chembiol.2023.06.003)
 
 ---
 
-## Citation & Publications
+## Publications
 
 The underlying dataset and screening methodology are published in:
-> - Pahl et al. (2023). *Cell Chemical Biology*, [doi:10.1016/j.chembiol.2023.06.003](https://doi.org/10.1016/j.chembiol.2023.06.003)
-> - Adariani et al. (2023). bioRxiv, [doi:10.1101/2023.11.08.565491](https://doi.org/10.1101/2023.11.08.565491)
+> - Pahl et al. (2023) *Cell Chem Biol*, DOI: [10.1016/j.chembiol.2023.06.003](https://doi.org/10.1016/j.chembiol.2023.06.003)
+> - Adariani et al. (2024) *J Med Chem*, DOI: [10.1021/acs.jmedchem.4c01183](https://doi.org/10.1021/acs.jmedchem.4c01183)
