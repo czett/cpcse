@@ -820,8 +820,24 @@ html, body {
     font-size: 0.875rem;
     color: #334155;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
+}
+
+/* Long cluster names (e.g. L/CH) span two columns so they stay on one line */
+.cluster-item-wide {
+    grid-column: span 2;
+}
+
+.cluster-label {
+    min-width: 0;
+}
+
+/* Keep superscript charges (e.g. Na+/K+) raised without inflating the line box */
+.cluster-item sup {
+    font-size: 0.7em;
+    line-height: 0;
+    vertical-align: 0.45em;
 }
 
 .cluster-dot {
@@ -830,6 +846,8 @@ html, body {
     border-radius: 50%;
     background-color: var(--primary-blue);
     flex-shrink: 0;
+    /* Align the dot with the first line of text (works when a label wraps) */
+    margin-top: calc((1.65em - 6px) / 2);
 }
 
 .alert-note {
@@ -1981,6 +1999,10 @@ html, body {
 
     .cluster-grid {
         grid-template-columns: 1fr;
+    }
+
+    .cluster-item-wide {
+        grid-column: auto;
     }
 
     .matrix-table {
