@@ -260,6 +260,15 @@ function initTagInput() {
 		tagInput.addEventListener("blur", function() {
 			flushPendingTagInput();
 		});
+
+		// Mobile keyboards often don't emit a keydown for "," — detect the
+		// delimiter from the input value instead and tokenize immediately.
+		tagInput.addEventListener("input", function() {
+			if (this.value.indexOf(",") !== -1) {
+				addTag(this.value);
+				this.value = "";
+			}
+		});
 	}
 
 	// Before any search form submission, handle strict state isolation between Basic and Advanced search
