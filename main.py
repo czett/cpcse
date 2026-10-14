@@ -1,6 +1,7 @@
 from decimal import Decimal
 import io
 import os
+import re
 import time
 from typing import List, Optional, Union
 
@@ -19,6 +20,10 @@ from psycopg2 import pool
 # Constants
 DELIMITER = "|"
 MAX_SEARCH_COUNT = 1000
+MAX_SEARCH_TERMS = 5
+MIN_TERM_LENGTH = 3
+MIN_CLUSTER_THRESHOLD = 70
+CLUSTER_TOP_RESULTS = 10
 
 app = Flask(__name__)
 dotenv.load_dotenv()
@@ -113,13 +118,65 @@ CLUSTER_DISPLAY_NAMES = {
 }
 
 
+def normalize_search_terms(raw: Optional[str]) -> List[str]:
+    """Split keyword input into valid search terms.
+
+    Accepts comma-, whitespace-, and newline-delimited input. Empty tokens and
+    terms shorter than MIN_TERM_LENGTH characters are ignored, duplicates are
+    removed, and the list is capped at MAX_SEARCH_TERMS.
+    """
+    if not raw:
+        return []
+
+    terms: List[str] = []
+    for token in re.split(r"[,\s]+", raw.strip()):
+        token = token.strip()
+        if len(token) < MIN_TERM_LENGTH:
+            continue
+        if token not in terms:
+            terms.append(token)
+        if len(terms) >= MAX_SEARCH_TERMS:
+            break
+    return terms
+
+
+def resolve_query_plan(
+    substances: Optional[List[str]],
+    thresholds: Optional[dict],
+) -> Optional[dict]:
+    """Determine ordering/limit behaviour for the advanced search cases.
+
+    - Case B (1 cluster, no keywords): order by that cluster DESC, LIMIT 10.
+    - Case C (1 cluster + keywords): order by that cluster DESC, no limit.
+    - Case A (0 clusters + valid keywords): standard search, no cluster ordering.
+    - Case D (0 clusters + no valid keywords): invalid, returns None.
+    """
+    cluster_col = None
+    if thresholds:
+        cluster_col = next((c for c in CLUSTER_COLUMNS if c in thresholds), None)
+
+    has_keywords = bool(substances)
+    if not has_keywords and not cluster_col:
+        return None  # Case D: nothing to search for
+
+    return {
+        "order_by_cluster": cluster_col,
+        "limit": CLUSTER_TOP_RESULTS if (cluster_col and not has_keywords) else None,
+    }
+
+
 def find_compounds(
     query: Optional[str] = None,
     substances: Optional[List[str]] = None,
     thresholds: Optional[dict] = None,
     skip_svg: bool = False,
+    order_by_cluster: Optional[str] = None,
+    limit: Optional[int] = None,
 ) -> Optional[List[List[Union[str, float]]]]:
-    """Search compounds from PostgreSQL matching query/substances and cluster thresholds."""
+    """Search compounds from PostgreSQL matching query/substances and a cluster threshold.
+
+    Optionally sorts descending by a single cluster score and caps the result set.
+    """
     if not DB_STRING:
         return None
 
@@ -154,6 +211,18 @@ def find_compounds(
 
     where_clause = " WHERE " + " AND ".join(conditions)
 
+    # Ordering: cluster-ranked searches sort strictly by the chosen cluster (DESC),
+    # otherwise fall back to the default batch/conc ordering.
+    if order_by_cluster in CLUSTER_COLUMNS:
+        order_clause = f"ORDER BY c.{order_by_cluster} DESC NULLS LAST"
+    else:
+        order_clause = "ORDER BY c.batch_no, c.conc_um"
+
+    # Optional cap (Case B: top N highest-scoring profiles).
+    limit_clause = ""
+    if isinstance(limit, int) and limit > 0:
+        limit_clause = " LIMIT %s"
+
     # 4. Structure SVG selection (Option C: skip_svg)
     if skip_svg:
         svg_select = "'' AS svg"
@@ -187,8 +256,11 @@ def find_compounds(
         FROM compounds c
         {join_clause}
         {where_clause}
-        ORDER BY c.batch_no, c.conc_um;
+        {order_clause}{limit_clause};
     """
+
+    if limit_clause:
+        params.append(limit)
 
     conn = None
     try:
@@ -238,24 +310,27 @@ def search():
     start = time.time()
     inp = request.form.get("nm", "").strip()
 
-    # Parse Advanced Search options
-    substances_raw = request.form.get("substances", "").strip()
-    substances = [s.strip() for s in substances_raw.split(",") if s.strip()] if substances_raw else []
+    # Parse Advanced Search keywords. Input may be comma-, space-, or
+    # newline-delimited; terms shorter than 3 chars and empty tokens are ignored,
+    # and the list is capped at 5 terms.
+    substances = normalize_search_terms(request.form.get("substances", ""))
 
-    # Parse cluster threshold filters
+    # Parse cluster threshold filters. Only a single cluster may be selected;
+    # the first active cluster is honoured and its threshold is floored at 70%.
     thresholds = {}
     for col_name in CLUSTER_COLUMNS:
         t_val = request.form.get(f"threshold_{col_name}")
         if t_val is not None and t_val.strip() != "":
             try:
-                thresholds[col_name] = float(t_val.strip())
+                thresholds[col_name] = max(MIN_CLUSTER_THRESHOLD, float(t_val.strip()))
             except ValueError:
                 pass
+            break
 
     # Parse skip_svg option
     skip_svg = bool(request.form.get("skip_svg"))
 
-    # Validate that at least one filter criterion is active
+    # Validate that at least one filter criterion is active (Case D is invalid)
     if not inp and not substances and not thresholds:
         return redirect("/error")
 
@@ -263,6 +338,16 @@ def search():
     # prioritize them and do not restrict by the main top input
     if substances or thresholds:
         inp = ""
+
+    # Resolve the query plan (Case A/B/C ordering and result cap)
+    order_by_cluster = None
+    limit = None
+    if substances or thresholds:
+        plan = resolve_query_plan(substances, thresholds)
+        if plan is None:
+            return redirect("/error")
+        order_by_cluster = plan["order_by_cluster"]
+        limit = plan["limit"]
 
     counter = session.get("count", [time.strftime("%Y-%m-%d"), 0])
     if counter[1] >= MAX_SEARCH_COUNT:
@@ -280,6 +365,8 @@ def search():
         substances=substances if substances else None,
         thresholds=thresholds if thresholds else None,
         skip_svg=skip_svg,
+        order_by_cluster=order_by_cluster,
+        limit=limit,
     )
     if not output or len(output) <= 1:
         return redirect("/error")
@@ -306,6 +393,10 @@ def search():
     else:
         display_query = inp
 
+    # Case B (cluster-only) returns the top 10 highest-scoring profiles
+    if limit:
+        display_query += f" (Top {limit} by score)"
+
     active_filters = []
     if substances:
         for s in substances:
@@ -328,6 +419,8 @@ def search():
         "query": inp if inp else None,
         "substances": substances if substances else None,
         "thresholds": thresholds if thresholds else None,
+        "order_by_cluster": order_by_cluster,
+        "limit": limit,
         "skip_svg": True,  # Text export never needs SVG
         "display_name": display_query,
     }
@@ -369,6 +462,8 @@ def download(fname: Optional[str] = None):
             substances=last_search.get("substances"),
             thresholds=last_search.get("thresholds"),
             skip_svg=True,
+            order_by_cluster=last_search.get("order_by_cluster"),
+            limit=last_search.get("limit"),
         )
         safe_filename = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in last_search.get("display_name", "search_results")) or "search_results"
     else:
@@ -423,4 +518,4 @@ def reset():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8081))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)

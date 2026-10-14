@@ -588,6 +588,22 @@ html, body {
     border: 1px solid #cbd5e1;
 }
 
+/* Inline validation hint inside the advanced search panel */
+.adv-inline-hint {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.adv-inline-hint.hidden {
+    display: none !important;
+}
+
 /* Tag Pills Input Container */
 .tag-input-container {
     display: flex;

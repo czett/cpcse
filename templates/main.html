@@ -75,14 +75,15 @@
 			<div class="adv-panel-inner">
 				<div class="adv-panel-header">
 					<h3 class="adv-panel-title">Advanced Search Filters</h3>
-					<p class="adv-panel-desc">Filter by substance tokens, cluster similarity thresholds, or both.</p>
+					<p class="adv-panel-desc">Search by up to 5 keywords (min 3 characters each) and/or a single bioactivity cluster threshold.</p>
 				</div>
+				<div class="adv-inline-hint hidden" id="adv-inline-hint" role="alert"></div>
 
-				<!-- Option A: Multi-Substance Tag Input -->
+				<!-- Option A: Keyword Tag Input (max 5 terms) -->
 				<div class="adv-field-group">
 					<div class="adv-field-header">
-						<label class="adv-field-label">Multi-Substance Search</label>
-						<span class="adv-field-hint">Search names or SMILES &bull; press <kbd>,</kbd> or <kbd>Enter</kbd> to add</span>
+						<label class="adv-field-label">Keyword Search (max 5 terms)</label>
+						<span class="adv-field-hint">Names or SMILES &bull; press <kbd>,</kbd> or <kbd>Enter</kbd> to add</span>
 					</div>
 					<div class="tag-input-container" id="tag-input-box" onclick="focusTagInput()">
 						<div class="tags-list" id="tags-list"></div>
@@ -91,11 +92,11 @@
 					<input type="hidden" name="substances" id="substances-hidden" value="{{ substances | join(',') if substances else '' }}" form="results-search-form">
 				</div>
 
-				<!-- Option B: Bioactivity Clusters with Thresholds -->
+				<!-- Option B: Bioactivity Cluster with Threshold (single select) -->
 				<div class="adv-field-group">
 					<div class="adv-field-header">
-						<label class="adv-field-label">Bioactivity Cluster Thresholds</label>
-						<span class="adv-field-hint">Substances must have cluster similarity &ge; threshold</span>
+						<label class="adv-field-label">Bioactivity Cluster Threshold</label>
+						<span class="adv-field-hint">Select up to 1 cluster &bull; score must be &ge; threshold (min 70%)</span>
 					</div>
 
 					<div class="cluster-filters-grid" id="cluster-filters-grid">
@@ -126,7 +127,7 @@
 							<div class="cluster-threshold-ctrl{% if not is_active %} hidden{% endif %}" id="ctrl-{{ id_key }}">
 								<div class="threshold-slider-row">
 									<span class="threshold-symbol">&ge;</span>
-									<input type="range" class="threshold-slider" min="50" max="100" step="1" value="{{ active_val }}" oninput="updateThresholdVal('{{ id_key }}', this.value)">
+									<input type="range" class="threshold-slider" min="70" max="100" step="1" value="{{ active_val }}" oninput="updateThresholdVal('{{ id_key }}', this.value)">
 									<span class="threshold-val-box" id="val-{{ id_key }}">{{ active_val }}%</span>
 								</div>
 								<input type="hidden" name="threshold_{{ id_key }}" id="input-{{ id_key }}" value="{{ active_val if is_active else '' }}"{% if not is_active %} disabled{% endif %} form="results-search-form">
