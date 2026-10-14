@@ -44,31 +44,29 @@
 			<div class="adv-search-panel hidden" id="adv-search-panel">
 				<div class="adv-panel-inner">
 					<div class="adv-panel-header">
-						<div class="adv-panel-title-group">
-							<span class="adv-badge">Optional</span>
-							<h3 class="adv-panel-title">Advanced Search Filters</h3>
-						</div>
-						<p class="adv-panel-desc">Combine multi-substance matching with bioactivity cluster similarity thresholds.</p>
+						<h3 class="adv-panel-title">Advanced Search Filters</h3>
+						<p class="adv-panel-desc">Search by up to 5 keywords (min 3 characters each) and/or a single bioactivity cluster threshold.</p>
 					</div>
+					<div class="adv-inline-hint hidden" id="adv-inline-hint" role="alert"></div>
 
-					<!-- Option A: Multi-Substance Tag Input -->
+					<!-- Option A: Keyword Tag Input (max 5 terms) -->
 					<div class="adv-field-group">
 						<div class="adv-field-header">
-							<label class="adv-field-label">Multi-Substance Search</label>
-							<span class="adv-field-hint">Type substance name and press <kbd>,</kbd> or <kbd>Enter</kbd></span>
+							<label class="adv-field-label">Keyword Search (max 5 terms)</label>
+							<span class="adv-field-hint">Names or SMILES &bull; press <kbd>,</kbd> or <kbd>Enter</kbd> to add</span>
 						</div>
 						<div class="tag-input-container" id="tag-input-box" onclick="focusTagInput()">
 							<div class="tags-list" id="tags-list"></div>
-							<input type="text" class="tag-bare-input" id="tag-text-input" placeholder="e.g. Centrocountin 1, Taxol, Vorinostat...">
+							<input type="text" class="tag-bare-input" id="tag-text-input" placeholder="Type compound or SMILES and press comma...">
 						</div>
 						<input type="hidden" name="substances" id="substances-hidden">
 					</div>
 
-					<!-- Option B: Bioactivity Clusters with Thresholds -->
+					<!-- Option B: Bioactivity Cluster with Threshold (single select) -->
 					<div class="adv-field-group">
 						<div class="adv-field-header">
-							<label class="adv-field-label">Bioactivity Cluster Thresholds</label>
-							<span class="adv-field-hint">Substances must have cluster similarity &ge; threshold</span>
+							<label class="adv-field-label">Bioactivity Cluster Threshold</label>
+							<span class="adv-field-hint">Select up to 1 cluster &bull; score must be &ge; threshold (min 70%)</span>
 						</div>
 
 						<div class="cluster-filters-grid" id="cluster-filters-grid">
@@ -97,7 +95,7 @@
 								<div class="cluster-threshold-ctrl hidden" id="ctrl-{{ id_key }}">
 									<div class="threshold-slider-row">
 										<span class="threshold-symbol">&ge;</span>
-										<input type="range" class="threshold-slider" min="50" max="100" step="1" value="80" oninput="updateThresholdVal('{{ id_key }}', this.value)">
+										<input type="range" class="threshold-slider" min="70" max="100" step="1" value="80" oninput="updateThresholdVal('{{ id_key }}', this.value)">
 										<span class="threshold-val-box" id="val-{{ id_key }}">80%</span>
 									</div>
 									<input type="hidden" name="threshold_{{ id_key }}" id="input-{{ id_key }}" value="" disabled>
@@ -107,6 +105,17 @@
 						</div>
 					</div>
 
+					<!-- Option C: Rendering Options (Skip SVG Structure) -->
+					<div class="adv-field-group">
+						<label class="adv-checkbox-option">
+							<input type="checkbox" name="skip_svg" id="skip-svg-check" value="1" class="adv-option-check">
+							<span class="adv-checkbox-label">
+								<strong>Skip 2D chemical structure rendering</strong>
+								<span class="adv-checkbox-desc">Faster load time by omitting SVG chemical structures from results</span>
+							</span>
+						</label>
+					</div>
+
 					<!-- Advanced Search Footer Actions -->
 					<div class="adv-panel-footer">
 						<div class="adv-footer-left">
@@ -114,7 +123,7 @@
 						</div>
 						<div class="adv-footer-right">
 							<button type="button" class="adv-cancel-btn" onclick="toggleAdvancedSearch(false)">Collapse</button>
-							<button type="submit" class="ui-button-primary">Apply &amp; Search</button>
+							<button type="submit" formnovalidate class="ui-button-primary">Apply &amp; Search</button>
 						</div>
 					</div>
 				</div>

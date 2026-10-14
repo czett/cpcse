@@ -11,7 +11,8 @@ Web tool for querying the profile similarity to predefined bioactivity clusters 
 The Subprofile Explorer provides access to the profile similarity of 1,883 reference landmark compounds to 13 defined bioactivity clusters.
 
 ### Key Features
-- **Compound Search & Matrix View:** Query compounds by name or SMILES string and compare cluster biosimilarity values side by side in a structured data grid.
+- **Compound Search & Matrix View:** Query compounds by name or SMILES string and compare cluster values side by side in a structured data grid.
+- **Advanced Search:** Pick a single cluster threshold (min 70%) and/or search up to 5 keyword terms (each at least 3 characters) at once. Cluster-only queries return the top 10 highest-scoring profiles, sorted by the selected cluster.
 - **2D Structure Visualization:** Chemical structures rendered as SVGs (precomputed with RDKit) directly alongside compound metadata.
 - **Result Export:** Download query results as delimited text files for local analysis.
 - **Lightweight Backend:** Flask application backed by PostgreSQL (Neon), deployed serverlessly on Vercel.
