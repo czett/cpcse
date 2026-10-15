@@ -1,21 +1,3 @@
-var menu_opened = false;
-
-function trigger_menu() {
-	var icon = document.getElementById("icon");
-	var menu = document.getElementById("menu");
-	if (!menu) return;
-
-	if (menu_opened === false) {
-		menu_opened = true;
-		menu.classList.add("mobile-menu-active");
-		if (icon) icon.style.transform = "rotate(90deg)";
-	} else {
-		menu_opened = false;
-		menu.classList.remove("mobile-menu-active");
-		if (icon) icon.style.transform = "rotate(0deg)";
-	}
-}
-
 function showToast(message) {
 	var toast = document.getElementById("toast-notification");
 	var toastMsg = document.getElementById("toast-message");
@@ -35,6 +17,10 @@ function showToast(message) {
 
 function copySmile(textToCopy, element) {
 	copyGeneric(textToCopy, element, "SMILES string copied!");
+}
+
+function copyCompoundName(textToCopy, element) {
+	copyGeneric(textToCopy, element, "Full compound name copied!");
 }
 
 function copyText(textToCopy, element, message) {

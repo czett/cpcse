@@ -211,12 +211,34 @@ def find_compounds(
 
     where_clause = " WHERE " + " AND ".join(conditions)
 
-    # Ordering: cluster-ranked searches sort strictly by the chosen cluster (DESC),
-    # otherwise fall back to the default batch/conc ordering.
+    # Preserve the user's typed keyword order for multi-compound searches: all
+    # profiles matching the first term are grouped ahead of every profile
+    # matching the second term, and so on. A CASE expression ranks each row by
+    # the first keyword it matches (LIKE against trivial name or SMILES). This
+    # is equivalent to ORDER BY array_position(ARRAY[...], lower(trivial_name))
+    # but also keeps partial-name and SMILES matches grouped correctly.
+    order_params: List[Union[str, float]] = []
+    group_order_expr = ""
+    if substances and len(substances) > 0:
+        rank_whens = []
+        for idx, s in enumerate(substances):
+            rank_whens.append(
+                "WHEN (LOWER(COALESCE(c.trivial_name, 'Unnamed Compound')) LIKE LOWER(%s) "
+                "OR LOWER(COALESCE(c.smiles, '')) LIKE LOWER(%s)) THEN " + str(idx)
+            )
+            order_params.extend([f"%{s.strip()}%", f"%{s.strip()}%"])
+        group_order_expr = "CASE " + " ".join(rank_whens) + f" ELSE {len(substances)} END, "
+
+    # Ordering: compound groups follow the typed keyword order; within each group
+    # a cluster-ranked search sorts by the chosen cluster (DESC), and the default
+    # tie-breaker is always batch number then concentration.
     if order_by_cluster in CLUSTER_COLUMNS:
-        order_clause = f"ORDER BY c.{order_by_cluster} DESC NULLS LAST"
+        order_clause = (
+            f"ORDER BY {group_order_expr}c.{order_by_cluster} DESC NULLS LAST, "
+            "c.batch_no, c.conc_um"
+        )
     else:
-        order_clause = "ORDER BY c.batch_no, c.conc_um"
+        order_clause = f"ORDER BY {group_order_expr}c.batch_no, c.conc_um"
 
     # Optional cap (Case B: top N highest-scoring profiles).
     limit_clause = ""
@@ -259,6 +281,8 @@ def find_compounds(
         {order_clause}{limit_clause};
     """
 
+    # Placeholder order must match the generated SQL: WHERE, then ORDER BY CASE, then LIMIT.
+    params.extend(order_params)
     if limit_clause:
         params.append(limit)
 

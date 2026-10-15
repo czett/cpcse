@@ -226,8 +226,8 @@
 								{% set val = col[r] %}
 
 								{% if r == 0 %}
-									<div class="value first-data-cell {{ row_class }}">
-										<span>{{ val or "Unnamed Compound" }}</span>
+									<div class="value first-data-cell {{ row_class }}" data-copy="{{ val or 'Unnamed Compound' }}" onclick="copyCompoundName(this.getAttribute('data-copy'), this)" title="Click to copy full name&#10;{{ val or 'Unnamed Compound' }}">
+										<span class="compound-trivial-name">{{ val or "Unnamed Compound" }}</span>
 									</div>
 								{% elif r == 1 %}
 									<div class="value smile {{ row_class }}" onclick="copySmile('{{ val | replace("'", "\\'") }}', this)" title="Click to copy SMILES">
