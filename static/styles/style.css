@@ -102,6 +102,8 @@ html, body {
     height: 3rem;
     width: auto;
     object-fit: contain;
+    display: block;
+    margin: 0 auto;
 }
 
 .navbar-menu {
@@ -1265,6 +1267,12 @@ html, body {
         flex-basis: 141px;
     }
 
+    /* Card view: let the results-layout gap alone set the spacing so the space
+       above the definitions box matches the space below it. */
+    .metric-definitions {
+        margin-top: 0;
+    }
+
     .metric-definition {
         flex-direction: column;
         gap: 0;
@@ -1321,7 +1329,7 @@ html, body {
 }
 
 .value.first-header-cell {
-    height: 52px;
+    min-height: 52px;
     background-color: #f1f5f9;
     color: var(--card-foreground);
     font-weight: 700;
@@ -1329,7 +1337,7 @@ html, body {
 }
 
 .value.first-data-cell {
-    height: 52px;
+    min-height: 52px;
     background-color: #f1f5f9;
     color: var(--card-foreground);
     font-weight: 600;
@@ -1337,7 +1345,43 @@ html, body {
 }
 
 .value.row-name {
-    height: 52px;
+    min-height: 52px;
+}
+
+/* Trivial-name row: long synonym/salt lists wrap and grow the row instead of
+   overflowing; every name cell is vertically centered so single-line names
+   ("Cytarabine") line up with multi-line ones. */
+.value.header-cell.first-header-cell.row-name,
+.value.first-data-cell.row-name {
+    align-items: center;
+    justify-content: center;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+/* Compound-name cells are click-to-copy */
+.value.first-data-cell.row-name {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.value.first-data-cell.row-name:hover {
+    background-color: #e2e8f0;
+}
+
+/* Clamp very long compound names to a few lines; the full string is exposed
+   via the native title="" tooltip on the cell. */
+.compound-trivial-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    width: 100%;
 }
 
 .value.row-smiles {
@@ -2052,7 +2096,7 @@ html, body {
    MOBILE BREAKPOINTS: BOTTOM NAV BAR & HORIZONTAL ICON LAYOUT (Mobile ONLY!)
    ========================================================================== */
 
-@media (max-width: 768px) {
+@media (max-width: 890px) {
     /* Top bar is viewport-locked so it never shifts while scrolling */
     .app-header {
         position: fixed;
@@ -2075,15 +2119,17 @@ html, body {
         padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
     }
 
-    /* Offset content below the fixed 56px header */
+    /* Offset content below the fixed header: 56px navbar + 1px border + the
+       original 16px breathing room, so content sits just below the black bar. */
     .main-wrapper {
-        padding: calc(56px + env(safe-area-inset-top, 0px)) 12px 16px 12px;
+        padding: calc(73px + env(safe-area-inset-top, 0px)) 12px 16px 12px;
     }
 
     .navbar {
         padding: 8px 16px;
         height: 56px;
         box-sizing: border-box;
+        justify-content: center;
     }
 
     .nav-logo {

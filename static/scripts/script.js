@@ -19,6 +19,10 @@ function copySmile(textToCopy, element) {
 	copyGeneric(textToCopy, element, "SMILES string copied!");
 }
 
+function copyCompoundName(textToCopy, element) {
+	copyGeneric(textToCopy, element, "Full compound name copied!");
+}
+
 function copyText(textToCopy, element, message) {
 	copyGeneric(textToCopy, element, message || "Email address copied!");
 }
