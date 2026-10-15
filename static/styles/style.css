@@ -1046,6 +1046,19 @@ html, body {
     vertical-align: 0.45em;
 }
 
+/* Superscripts inside labels: raised and neatly aligned without distorting line height */
+label sup,
+.adv-field-label sup,
+.adv-checkbox-label sup,
+.cluster-check-text sup,
+.cluster-label sup,
+.mobile-metric-label sup,
+.partner-label sup {
+    font-size: 0.7em;
+    line-height: 0;
+    vertical-align: 0.45em;
+}
+
 .cluster-dot {
     width: 6px;
     height: 6px;

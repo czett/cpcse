@@ -12,7 +12,7 @@
 							<circle cx="11" cy="11" r="8"></circle>
 							<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
 						</svg>
-						<input class="ui-input" type="text" name="nm" placeholder="Search compound or SMILES string" value="{{ search_query or '' }}" required id="compound-search-input">
+						<input class="ui-input" type="text" name="nm" placeholder="Search compound or SMILES string" value="{{ search_query or '' }}" required minlength="3" id="compound-search-input">
 					</div>
 					<button class="ui-button-primary" type="submit">Search</button>
 					<button type="button" class="adv-search-toggle-btn{% if active_filter_count and active_filter_count > 0 %} has-filters{% endif %}" id="adv-search-toggle-btn" onclick="toggleAdvancedSearch()" aria-expanded="false" title="Expand advanced search options">
@@ -75,7 +75,7 @@
 			<div class="adv-panel-inner" style="margin-bottom: 0; padding-bottom: 1.25rem;">
 				<div class="adv-panel-header">
 					<h3 class="adv-panel-title">Advanced Search Filters</h3>
-					<p class="adv-panel-desc">Search by up to 5 keywords (min 3 characters each) or by a single bioactivity cluster threshold.</p>
+					<p class="adv-panel-desc">Search by keyword or cluster. If using both, results will be based on keywords only.</p>
 				</div>
 				<div class="adv-inline-hint hidden" id="adv-inline-hint" role="alert"></div>
 
@@ -148,11 +148,11 @@
 
 				<!-- Option C: Rendering Options (Skip SVG Structure) -->
 				<div class="adv-field-group">
-					<label class="adv-checkbox-option">
+					<label class="adv-checkbox-option" style="display: flex; align-items: center;">
 						<input type="checkbox" name="skip_svg" id="skip-svg-check" value="1" class="adv-option-check"{% if skip_svg %} checked{% endif %} form="results-search-form">
 						<span class="adv-checkbox-label">
-							<strong>Hide 2D structures to load faster</strong>
-							<span class="adv-checkbox-desc">Results load quicker when 2D chemical structure images are left out</span>
+							<strong>Hide structure images to load faster</strong>
+							<span class="adv-checkbox-desc">Results load quicker when chemical structure images are left out</span>
 						</span>
 					</label>
 				</div>
@@ -269,6 +269,71 @@
 				}
 				initRangeSliders();
 				document.addEventListener('DOMContentLoaded', initRangeSliders);
+			})();
+		</script>
+
+		<script>
+			(function () {
+				// Make the entire cluster tile clickable: clicking anywhere outside the
+				// slider controls toggles the internal checkbox, which also expands or
+				// collapses the threshold slider (handled by toggleClusterFilter).
+				function initClusterTileClick() {
+					document.querySelectorAll('.cluster-filter-card').forEach(function (card) {
+						if (card.dataset.tileReady === '1') { return; }
+						card.dataset.tileReady = '1';
+						card.style.cursor = 'pointer';
+
+						// Interacting with the slider must not toggle the tile.
+						card.querySelectorAll('.range-slider-container, .slider-track, .range-min, .range-max, .slider-badge').forEach(function (el) {
+							el.addEventListener('click', function (e) { e.stopPropagation(); });
+						});
+
+						card.addEventListener('click', function (e) {
+							// The label/checkbox and the threshold controls handle their own clicks.
+							if (e.target.closest('.cluster-check-label') ||
+								e.target.closest('.cluster-filter-check') ||
+								e.target.closest('.cluster-threshold-ctrl')) {
+								return;
+							}
+							var cb = card.querySelector('.cluster-filter-check');
+							if (cb) {
+								cb.checked = !cb.checked;
+								cb.dispatchEvent(new Event('change', { bubbles: true }));
+							}
+						});
+					});
+				}
+				initClusterTileClick();
+				document.addEventListener('DOMContentLoaded', initClusterTileClick);
+			})();
+		</script>
+
+		<script>
+			(function () {
+				// Enforce a minimum of 3 characters on the primary search input.
+				function initSearchMinLength() {
+					var searchInput = document.getElementById('compound-search-input');
+					var form = searchInput ? searchInput.closest('form') : null;
+					if (!searchInput || !form || form.dataset.minlengthReady === '1') { return; }
+					form.dataset.minlengthReady = '1';
+
+					searchInput.addEventListener('input', function () {
+						searchInput.setCustomValidity('');
+					});
+
+					form.addEventListener('submit', function (e) {
+						var query = searchInput.value.trim();
+						if (query.length > 0 && query.length < 3) {
+							e.preventDefault();
+							searchInput.setCustomValidity("Please enter at least 3 characters");
+							searchInput.reportValidity();
+						} else {
+							searchInput.setCustomValidity('');
+						}
+					});
+				}
+				initSearchMinLength();
+				document.addEventListener('DOMContentLoaded', initSearchMinLength);
 			})();
 		</script>
 
@@ -417,7 +482,7 @@
 
 						{# Column 0: Sticky Row Header #}
 						<div class="value header-cell cluster-header {{ row_class }}">
-							<span>{{ header_label | replace('Cluster ', '') }}</span>
+							<span>{{ header_label | replace('Cluster ', '') | replace('Na+/K+ ATPase', 'Na<sup>+</sup>/K<sup>+</sup> ATPase') | safe }}</span>
 						</div>
 
 						{# Columns 1..N: Data Cells for each Compound #}
@@ -554,10 +619,10 @@
 				<!-- Cluster Scores Grid -->
 				<div class="mobile-metrics-grid">
 					{% for row_idx in range(7, col|length) %}
-						{% set metric_name = output[0][row_idx] | replace('Cluster ', '') %}
+						{% set metric_name = output[0][row_idx] | replace('Cluster ', '') | replace('Na+/K+ ATPase', 'Na<sup>+</sup>/K<sup>+</sup> ATPase') %}
 						{% set metric_val = col[row_idx] %}
 						<div class="mobile-metric-item">
-							<span class="mobile-metric-label">{{ metric_name }}</span>
+							<span class="mobile-metric-label">{{ metric_name | safe }}</span>
 							{% if metric_val is number %}
 								{% if metric_val > 95 %}
 									<span class="mobile-val-badge nf">{{ metric_val | round | int }}</span>

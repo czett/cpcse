@@ -17,7 +17,7 @@
 						<circle cx="11" cy="11" r="8"></circle>
 						<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
 					</svg>
-					<input class="ui-input" type="text" name="nm" placeholder="Search by compound name or SMILES string" required autofocus id="compound-search-input">
+					<input class="ui-input" type="text" name="nm" placeholder="Search by compound name or SMILES string" required minlength="3" autofocus id="compound-search-input">
 					<button type="button" class="clear-btn" id="clear-btn" style="display: none;">&times;</button>
 				</div>
 				<button class="ui-button-primary" type="submit">Search Compound</button>
@@ -45,7 +45,7 @@
 				<div class="adv-panel-inner" style="margin-bottom: 0; padding-bottom: 1.25rem;">
 					<div class="adv-panel-header">
 						<h3 class="adv-panel-title">Advanced Search Filters</h3>
-						<p class="adv-panel-desc">Search by up to 5 keywords (min 3 characters each) or by a single bioactivity cluster threshold.</p>
+						<p class="adv-panel-desc">Search by keyword or cluster. If using both, results will be based on keywords only.</p>
 					</div>
 					<div class="adv-inline-hint hidden" id="adv-inline-hint" role="alert"></div>
 
@@ -115,11 +115,11 @@
 
 					<!-- Option C: Rendering Options (Skip SVG Structure) -->
 					<div class="adv-field-group">
-						<label class="adv-checkbox-option">
+						<label class="adv-checkbox-option" style="display: flex; align-items: center;">
 							<input type="checkbox" name="skip_svg" id="skip-svg-check" value="1" class="adv-option-check">
 							<span class="adv-checkbox-label">
-								<strong>Hide 2D structures to load faster</strong>
-								<span class="adv-checkbox-desc">Results load quicker when 2D chemical structure images are left out</span>
+								<strong>Hide structure images to load faster</strong>
+								<span class="adv-checkbox-desc">Results load quicker when chemical structure images are left out</span>
 							</span>
 						</label>
 					</div>
@@ -137,6 +137,35 @@
 				</div>
 			</div>
 		</form>
+
+		<script>
+			(function () {
+				// Enforce a minimum of 3 characters on the primary search input.
+				function initSearchMinLength() {
+					var searchInput = document.getElementById('compound-search-input');
+					var form = searchInput ? searchInput.closest('form') : null;
+					if (!searchInput || !form || form.dataset.minlengthReady === '1') { return; }
+					form.dataset.minlengthReady = '1';
+
+					searchInput.addEventListener('input', function () {
+						searchInput.setCustomValidity('');
+					});
+
+					form.addEventListener('submit', function (e) {
+						var query = searchInput.value.trim();
+						if (query.length > 0 && query.length < 3) {
+							e.preventDefault();
+							searchInput.setCustomValidity("Please enter at least 3 characters");
+							searchInput.reportValidity();
+						} else {
+							searchInput.setCustomValidity('');
+						}
+					});
+				}
+				initSearchMinLength();
+				document.addEventListener('DOMContentLoaded', initSearchMinLength);
+			})();
+		</script>
 
 		<div class="quick-search-section" id="quick-search-section" style="margin-top: 8px; margin-bottom: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
 			<span class="quick-label" style="margin: 0; padding: 0; line-height: 1;">Try searching:</span>
@@ -236,6 +265,42 @@
 				}
 				initRangeSliders();
 				document.addEventListener('DOMContentLoaded', initRangeSliders);
+			})();
+		</script>
+
+		<script>
+			(function () {
+				// Make the entire cluster tile clickable: clicking anywhere outside the
+				// slider controls toggles the internal checkbox, which also expands or
+				// collapses the threshold slider (handled by toggleClusterFilter).
+				function initClusterTileClick() {
+					document.querySelectorAll('.cluster-filter-card').forEach(function (card) {
+						if (card.dataset.tileReady === '1') { return; }
+						card.dataset.tileReady = '1';
+						card.style.cursor = 'pointer';
+
+						// Interacting with the slider must not toggle the tile.
+						card.querySelectorAll('.range-slider-container, .slider-track, .range-min, .range-max, .slider-badge').forEach(function (el) {
+							el.addEventListener('click', function (e) { e.stopPropagation(); });
+						});
+
+						card.addEventListener('click', function (e) {
+							// The label/checkbox and the threshold controls handle their own clicks.
+							if (e.target.closest('.cluster-check-label') ||
+								e.target.closest('.cluster-filter-check') ||
+								e.target.closest('.cluster-threshold-ctrl')) {
+								return;
+							}
+							var cb = card.querySelector('.cluster-filter-check');
+							if (cb) {
+								cb.checked = !cb.checked;
+								cb.dispatchEvent(new Event('change', { bubbles: true }));
+							}
+						});
+					});
+				}
+				initClusterTileClick();
+				document.addEventListener('DOMContentLoaded', initClusterTileClick);
 			})();
 		</script>
 	</div>
