@@ -72,68 +72,77 @@
 
 		<!-- Advanced Search Expandable Panel for Results View -->
 		<div class="adv-search-panel hidden" id="adv-search-panel">
-			<div class="adv-panel-inner">
+			<div class="adv-panel-inner" style="margin-bottom: 0; padding-bottom: 1.25rem;">
 				<div class="adv-panel-header">
 					<h3 class="adv-panel-title">Advanced Search Filters</h3>
-					<p class="adv-panel-desc">Search by up to 5 keywords (min 3 characters each) and/or a single bioactivity cluster threshold.</p>
+					<p class="adv-panel-desc">Search by up to 5 keywords (min 3 characters each) or by a single bioactivity cluster threshold.</p>
 				</div>
 				<div class="adv-inline-hint hidden" id="adv-inline-hint" role="alert"></div>
 
-				<!-- Option A: Keyword Tag Input (max 5 terms) -->
-				<div class="adv-field-group">
-					<div class="adv-field-header">
-						<label class="adv-field-label">Keyword Search (max 5 terms)</label>
-						<span class="adv-field-hint">Names or SMILES &bull; press <kbd>,</kbd> or <kbd>Enter</kbd> to add</span>
+				<!-- Section 1: Search Multiple -->
+				<div class="adv-section">
+					<h3 class="adv-panel-title">Search Multiple</h3>
+					<p class="adv-section-subtitle text-slate-500 text-xs" style="font-size: 12px; font-weight: 400; color: #64748b; line-height: 1.4; margin-top: 2px; margin-bottom: 8px;">Search up to 5 trivial names or SMILES strings</p>
+					<div class="adv-field-group">
+						<div class="tag-input-container" id="tag-input-box" onclick="focusTagInput()">
+							<div class="tags-list" id="tags-list"></div>
+							<input type="text" class="tag-bare-input" id="tag-text-input" value="" placeholder="Type compound or SMILES and press comma">
+						</div>
+						<input type="hidden" name="substances" id="substances-hidden" value="" form="results-search-form">
 					</div>
-					<div class="tag-input-container" id="tag-input-box" onclick="focusTagInput()">
-						<div class="tags-list" id="tags-list"></div>
-						<input type="text" class="tag-bare-input" id="tag-text-input" placeholder="Type compound or SMILES and press comma...">
-					</div>
-					<input type="hidden" name="substances" id="substances-hidden" value="{{ substances | join(',') if substances else '' }}" form="results-search-form">
 				</div>
 
-				<!-- Option B: Bioactivity Cluster with Threshold (single select) -->
-				<div class="adv-field-group">
-					<div class="adv-field-header">
-						<label class="adv-field-label">Bioactivity Cluster Threshold</label>
-						<span class="adv-field-hint">Select up to 1 cluster &bull; score must be &ge; threshold (min 70%)</span>
-					</div>
+				<hr class="border-t border-slate-200 my-4">
 
-					<div class="cluster-filters-grid" id="cluster-filters-grid">
-						{% set clusters = [
-							('cluster_akt_pi3k_mtor', 'AKT / PI3K / MTOR'),
-							('cluster_aurora', 'Aurora Kinases'),
-							('cluster_bet', 'BET'),
-							('cluster_dna_synthesis', 'DNA Synthesis'),
-							('cluster_hdac', 'HDAC'),
-							('cluster_hsp90', 'HSP90'),
-							('cluster_l_ch', 'L/CH (Lysosomotropism)'),
-							('cluster_mitostress', 'MitoStress'),
-							('cluster_na_k_atpase', 'Na+/K+ ATPase'),
-							('cluster_protein_synthesis', 'Protein Synthesis'),
-							('cluster_pyrimidine_synthesis', 'Pyrimidine Synthesis'),
-							('cluster_tubulin', 'Tubulin'),
-							('cluster_uncoupling', 'Uncoupling')
-						] %}
-						{% for id_key, label_name in clusters %}
-						{% set is_active = thresholds and id_key in thresholds %}
-						{% set active_val = thresholds[id_key] | round | int if is_active else 80 %}
-						<div class="cluster-filter-card{% if is_active %} is-active{% endif %}" id="card-{{ id_key }}">
-							<label class="cluster-check-label">
-								<input type="checkbox" class="cluster-filter-check" data-cluster="{{ id_key }}" onchange="toggleClusterFilter('{{ id_key }}', this.checked)"{% if is_active %} checked{% endif %}>
-								<span class="cluster-check-custom"></span>
-								<span class="cluster-check-text">{{ label_name }}</span>
-							</label>
-							<div class="cluster-threshold-ctrl{% if not is_active %} hidden{% endif %}" id="ctrl-{{ id_key }}">
-								<div class="threshold-slider-row">
-									<span class="threshold-symbol">&ge;</span>
-									<input type="range" class="threshold-slider" min="70" max="100" step="1" value="{{ active_val }}" oninput="updateThresholdVal('{{ id_key }}', this.value)">
-									<span class="threshold-val-box" id="val-{{ id_key }}">{{ active_val }}%</span>
+				<!-- Section 2: Search by Cluster -->
+				<div class="adv-section">
+					<h3 class="adv-panel-title">Search by Cluster</h3>
+					<p class="adv-section-subtitle text-slate-500 text-xs" style="font-size: 12px; font-weight: 400; color: #64748b; line-height: 1.4; margin-top: 2px; margin-bottom: 8px;">Lists up to 10 profiles for a selected cluster</p>
+					<div class="adv-field-group">
+
+						<div class="cluster-filters-grid" id="cluster-filters-grid">
+							{% set clusters = [
+								('cluster_akt_pi3k_mtor', 'AKT / PI3K / MTOR'),
+								('cluster_aurora', 'Aurora Kinases'),
+								('cluster_bet', 'BET'),
+								('cluster_dna_synthesis', 'DNA Synthesis'),
+								('cluster_hdac', 'HDAC'),
+								('cluster_hsp90', 'HSP90'),
+								('cluster_l_ch', 'L/CH'),
+								('cluster_mitostress', 'MitoStress'),
+								('cluster_na_k_atpase', 'Na<sup>+</sup>/K<sup>+</sup> ATPase'),
+								('cluster_protein_synthesis', 'Protein Synthesis'),
+								('cluster_pyrimidine_synthesis', 'Pyrimidine Synthesis'),
+								('cluster_tubulin', 'Tubulin'),
+								('cluster_uncoupling', 'Uncoupling')
+							] %}
+							{% for id_key, label_name in clusters %}
+							{% set is_active = thresholds and id_key in thresholds %}
+							{% set active_min = (thresholds[id_key].min | round | int) if (is_active and thresholds[id_key].min is defined) else ((thresholds[id_key] | round | int) if is_active else 75) %}
+							{% set active_max = (thresholds[id_key].max | round | int) if (is_active and thresholds[id_key].max is defined) else ((thresholds[id_key] | round | int) if is_active else 100) %}
+							<div class="cluster-filter-card{% if is_active %} is-active{% endif %}" id="card-{{ id_key }}">
+								<label class="cluster-check-label">
+									<input type="checkbox" class="cluster-filter-check" data-cluster="{{ id_key }}" onchange="toggleClusterFilter('{{ id_key }}', this.checked)"{% if is_active %} checked{% endif %}>
+									<span class="cluster-check-custom"></span>
+									<span class="cluster-check-text">{{ label_name | safe }}</span>
+								</label>
+								<div class="cluster-threshold-ctrl{% if not is_active %} hidden{% endif %}" id="ctrl-{{ id_key }}">
+									<div class="range-slider-container" data-cluster="{{ id_key }}">
+										<div class="slider-track"></div>
+										<input type="range" class="range-min" name="min_threshold" min="75" max="100" value="{{ active_min }}" step="1" form="results-search-form">
+										<input type="range" class="range-max" name="max_threshold" min="75" max="100" value="{{ active_max }}" step="1" form="results-search-form">
+									</div>
+									<div class="slider-badge">
+										<span class="badge-label">&ge;</span>
+										<span class="range-val-min">{{ active_min }}%</span> &ndash; <span class="range-val-max">{{ active_max }}%</span>
+									</div>
+									<input type="hidden" name="threshold_{{ id_key }}" id="input-{{ id_key }}" value="{{ active_min if is_active else '' }}"{% if not is_active %} disabled{% endif %} form="results-search-form">
+									<input type="hidden" name="min_threshold_{{ id_key }}" id="input-min-{{ id_key }}" value="{{ active_min if is_active else '' }}"{% if not is_active %} disabled{% endif %} form="results-search-form">
+									<input type="hidden" name="max_threshold_{{ id_key }}" id="input-max-{{ id_key }}" value="{{ active_max if is_active else '' }}"{% if not is_active %} disabled{% endif %} form="results-search-form">
 								</div>
-								<input type="hidden" name="threshold_{{ id_key }}" id="input-{{ id_key }}" value="{{ active_val if is_active else '' }}"{% if not is_active %} disabled{% endif %} form="results-search-form">
 							</div>
+							{% endfor %}
 						</div>
-						{% endfor %}
 					</div>
 				</div>
 
@@ -142,8 +151,8 @@
 					<label class="adv-checkbox-option">
 						<input type="checkbox" name="skip_svg" id="skip-svg-check" value="1" class="adv-option-check"{% if skip_svg %} checked{% endif %} form="results-search-form">
 						<span class="adv-checkbox-label">
-							<strong>Skip 2D chemical structure rendering</strong>
-							<span class="adv-checkbox-desc">Faster load time by omitting SVG chemical structures from results</span>
+							<strong>Hide 2D structures to load faster</strong>
+							<span class="adv-checkbox-desc">Results load quicker when 2D chemical structure images are left out</span>
 						</span>
 					</label>
 				</div>
@@ -161,8 +170,110 @@
 			</div>
 		</div>
 
+		<!-- Try searching: visible only while Advanced Search is collapsed -->
+		<div class="quick-search-section" id="quick-search-section" style="margin-top: 8px; margin-bottom: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+			<span class="quick-label" style="margin: 0; padding: 0; line-height: 1;">Try searching:</span>
+			<div class="quick-pills" style="margin: 0; padding: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+				<button type="button" class="pill-btn" data-example="Ciclopirox" onclick="fillSearch('Ciclopirox')">Ciclopirox</button>
+				<button type="button" class="pill-btn" data-example="Fluoxetine" onclick="fillSearch('Fluoxetine')">Fluoxetine</button>
+				<button type="button" class="pill-btn" data-example="Nocodazole" onclick="fillSearch('Nocodazole')">Nocodazole</button>
+				<button type="button" class="pill-btn" data-example="Rapamycin" onclick="fillSearch('Rapamycin')">Rapamycin</button>
+				<button type="button" class="pill-btn" data-example="Vorinostat" onclick="fillSearch('Vorinostat')">Vorinostat</button>
+			</div>
+		</div>
+		<script>
+			(function () {
+				function syncQuickSearchVisibility() {
+					var panel = document.getElementById('adv-search-panel');
+					var quick = document.getElementById('quick-search-section');
+					if (!panel || !quick) { return; }
+					if (panel.classList.contains('hidden')) {
+						// Advanced Search collapsed -> restore "Try searching"
+						quick.classList.remove('hidden');
+						quick.classList.remove('d-none');
+						quick.style.removeProperty('display');
+					} else {
+						// Advanced Search expanded -> hide "Try searching"
+						quick.classList.add('hidden');
+						quick.classList.add('d-none');
+						quick.style.display = 'none';
+					}
+				}
+				var toggleBtn = document.getElementById('adv-search-toggle-btn');
+				if (toggleBtn) {
+					toggleBtn.addEventListener('click', function () {
+						window.setTimeout(syncQuickSearchVisibility, 0);
+					});
+				}
+				// Initialize immediately, so an already-open Advanced Search hides "Try searching".
+				syncQuickSearchVisibility();
+				document.addEventListener('DOMContentLoaded', syncQuickSearchVisibility);
+			})();
+		</script>
+
+		<script>
+			(function () {
+				// Dual-range slider: live badge updates with min/max crossing prevention.
+				function initRangeSliders() {
+					document.querySelectorAll('.range-slider-container').forEach(function (container) {
+						if (container.dataset.rangeReady === '1') { return; }
+						container.dataset.rangeReady = '1';
+
+						var minInput = container.querySelector('.range-min');
+						var maxInput = container.querySelector('.range-max');
+						if (!minInput || !maxInput) { return; }
+
+						var card = container.closest('.cluster-filter-card');
+						var badge = card ? card.querySelector('.slider-badge') : null;
+						var valMin = badge ? badge.querySelector('.range-val-min') : null;
+						var valMax = badge ? badge.querySelector('.range-val-max') : null;
+						var key = container.getAttribute('data-cluster') || '';
+						var hiddenMin = document.getElementById('input-min-' + key);
+						var hiddenMax = document.getElementById('input-max-' + key);
+						var hiddenLegacy = document.getElementById('input-' + key);
+						var checkbox = card ? card.querySelector('.cluster-filter-check') : null;
+
+						function render() {
+							var lo = parseInt(minInput.value, 10);
+							var hi = parseInt(maxInput.value, 10);
+							if (valMin) { valMin.textContent = lo + '%'; }
+							if (valMax) { valMax.textContent = hi + '%'; }
+							if (hiddenMin) { hiddenMin.value = lo; }
+							if (hiddenMax) { hiddenMax.value = hi; }
+							if (hiddenLegacy) { hiddenLegacy.value = lo; }
+						}
+
+						minInput.addEventListener('input', function () {
+							if (parseInt(minInput.value, 10) > parseInt(maxInput.value, 10)) {
+								minInput.value = maxInput.value;
+							}
+							render();
+						});
+
+						maxInput.addEventListener('input', function () {
+							if (parseInt(maxInput.value, 10) < parseInt(minInput.value, 10)) {
+								maxInput.value = minInput.value;
+							}
+							render();
+						});
+
+						function syncEnabled() {
+							var on = checkbox ? checkbox.checked : true;
+							minInput.disabled = !on;
+							maxInput.disabled = !on;
+						}
+						if (checkbox) { checkbox.addEventListener('change', syncEnabled); }
+						syncEnabled();
+						render();
+					});
+				}
+				initRangeSliders();
+				document.addEventListener('DOMContentLoaded', initRangeSliders);
+			})();
+		</script>
+
 		{% if results_length is defined %}
-		<div class="toolbar-bottom">
+		<div class="toolbar-bottom" style="margin-top: 1rem;">
 			<div class="results-count-info">
 				Found <strong>{{ results_length }}</strong> compound profile{% if results_length != 1 %}s{% endif %}
 				<!--{% if elapsed_ms is defined %}&bull; <span class="time-stat">{{ elapsed_ms }} ms</span>{% endif %}-->
@@ -224,10 +335,15 @@
 							{% for col_idx in range(1, output|length) %}
 								{% set col = output[col_idx] %}
 								{% set val = col[r] %}
+								{% if r == 0 %}
+									{% if val is not defined or not val %}
+										{% set val = 'Unnamed Compound' %}
+									{% endif %}
+								{% endif %}
 
 								{% if r == 0 %}
-									<div class="value first-data-cell {{ row_class }}" data-copy="{{ val or 'Unnamed Compound' }}" onclick="copyCompoundName(this.getAttribute('data-copy'), this)" title="Click to copy full name&#10;{{ val or 'Unnamed Compound' }}">
-										<span class="compound-trivial-name">{{ val or "Unnamed Compound" }}</span>
+									<div class="value first-data-cell {{ row_class }}" data-copy="{{ val }}" onclick="copyCompoundName(this.getAttribute('data-copy'), this)" title="Click to copy full name&#10;{{ val }}">
+										<span class="compound-trivial-name">{{ val }}</span>
 									</div>
 								{% elif r == 1 %}
 									<div class="value smile {{ row_class }}" onclick="copySmile('{{ val | replace("'", "\\'") }}', this)" title="Click to copy SMILES">
@@ -369,9 +485,11 @@
 	<div class="mobile-cards-container hidden" id="cards-container">
 		{% for col_idx in range(1, output|length) %}
 			{% set col = output[col_idx] %}
+			{% set col_trivial_name = col[0] if col[0] is defined and col[0] else '' %}
+			{% if col_trivial_name %}
 			<div class="mobile-compound-card">
 				<div class="mobile-card-header">
-					<h3 class="mobile-compound-title">{{ col[0] or "Unnamed Compound" }}</h3>
+					<h3 class="mobile-compound-title">{{ col_trivial_name }}</h3>
 					<div class="mobile-header-badges">
 						<span class="mobile-batch-badge">Batch {{ col[2] if col[2] is not number else (col[2] | round | int) }}</span>
 						<span class="mobile-conc-badge">
@@ -459,6 +577,7 @@
 					{% endfor %}
 				</div>
 			</div>
+			{% endif %}
 		{% endfor %}
 	</div>
 	{% endif %}
