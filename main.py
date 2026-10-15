@@ -13,6 +13,7 @@ from flask import (
     render_template,
     request,
     session,
+    url_for,
 )
 import psycopg2
 from psycopg2 import pool
@@ -22,7 +23,8 @@ DELIMITER = "|"
 MAX_SEARCH_COUNT = 1000
 MAX_SEARCH_TERMS = 5
 MIN_TERM_LENGTH = 3
-MIN_CLUSTER_THRESHOLD = 70
+MIN_CLUSTER_THRESHOLD = 75
+MAX_CLUSTER_THRESHOLD = 100
 CLUSTER_TOP_RESULTS = 10
 
 app = Flask(__name__)
@@ -118,6 +120,36 @@ CLUSTER_DISPLAY_NAMES = {
 }
 
 
+# Matches ordinary whitespace plus hidden/zero-width and control characters
+# (newlines, tabs, non-breaking/zero-width spaces, BOM, etc.).
+_WHITESPACE_RE = re.compile(r"[\s\u00a0\u200b-\u200d\u2028\u2029\ufeff\x00-\x1f\x7f]+")
+
+
+def normalize_text(value: Optional[str]) -> str:
+    """Collapse hidden whitespace/newlines and lowercase a raw input value."""
+    return _WHITESPACE_RE.sub(" ", value or "").strip().lower()
+
+
+def format_threshold_value(v: float) -> Union[str, float, int]:
+    """Render a numeric cluster threshold without a trailing .0 for integers."""
+    f = float(v)
+    return int(f) if f.is_integer() else f
+
+
+def describe_threshold(col: str, spec: dict) -> str:
+    """Human-readable description of a min/max cluster threshold range."""
+    cname = CLUSTER_DISPLAY_NAMES.get(col, col)
+    lo = spec.get("min")
+    hi = spec.get("max")
+    if lo is not None and hi is not None:
+        return f"{cname} {format_threshold_value(lo)}-{format_threshold_value(hi)}%"
+    if lo is not None:
+        return f"{cname} \u2265 {format_threshold_value(lo)}%"
+    if hi is not None:
+        return f"{cname} \u2264 {format_threshold_value(hi)}%"
+    return cname
+
+
 def normalize_search_terms(raw: Optional[str]) -> List[str]:
     """Split keyword input into valid search terms.
 
@@ -130,7 +162,7 @@ def normalize_search_terms(raw: Optional[str]) -> List[str]:
 
     terms: List[str] = []
     for token in re.split(r"[,\s]+", raw.strip()):
-        token = token.strip()
+        token = normalize_text(token)
         if len(token) < MIN_TERM_LENGTH:
             continue
         if token not in terms:
@@ -161,7 +193,7 @@ def resolve_query_plan(
 
     return {
         "order_by_cluster": cluster_col,
-        "limit": CLUSTER_TOP_RESULTS if (cluster_col and not has_keywords) else None,
+        "limit": CLUSTER_TOP_RESULTS if cluster_col else None,
     }
 
 
@@ -198,16 +230,26 @@ def find_compounds(
         q = f"%{query.strip()}%"
         params.extend([q, q])
 
-    # 3. Cluster threshold filtering (Option B: c.<cluster> >= threshold)
+    # 3. Cluster threshold filtering (Option B: min <= c.<cluster> <= max)
     if thresholds:
-        for col_name, thresh_val in thresholds.items():
-            if col_name in CLUSTER_COLUMNS:
+        for col_name, spec in thresholds.items():
+            if col_name not in CLUSTER_COLUMNS:
+                continue
+            t_min = spec.get("min") if isinstance(spec, dict) else spec
+            t_max = spec.get("max") if isinstance(spec, dict) else None
+            if t_min is not None:
                 conditions.append(f"c.{col_name} >= %s")
-                params.append(float(thresh_val))
+                params.append(float(t_min))
+            if t_max is not None:
+                conditions.append(f"c.{col_name} <= %s")
+                params.append(float(t_max))
 
     # If neither query, substances, nor thresholds are provided, return early
     if not conditions:
         return None
+
+    # Exclude unnamed compounds from every backend query.
+    conditions.append("(c.trivial_name IS NOT NULL AND TRIM(c.trivial_name) <> '')")
 
     where_clause = " WHERE " + " AND ".join(conditions)
 
@@ -290,12 +332,30 @@ def find_compounds(
     try:
         if db_pool:
             conn = db_pool.getconn()
+            # A pooled connection may have been dropped since it was returned;
+            # discard the stale handle and open a fresh one before querying.
+            if getattr(conn, "closed", 0):
+                db_pool.putconn(conn, close=True)
+                conn = db_pool.getconn()
         else:
             conn = psycopg2.connect(DB_STRING)
 
-        with conn.cursor() as cur:
-            cur.execute(sql, tuple(params))
-            rows = cur.fetchall()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql, tuple(params))
+                rows = cur.fetchall()
+        except Exception:
+            # The connection died mid-query: reconnect and retry exactly once so
+            # a dropped pooled connection does not surface as empty results.
+            if db_pool:
+                db_pool.putconn(conn, close=True)
+                conn = db_pool.getconn()
+            else:
+                conn.close()
+                conn = psycopg2.connect(DB_STRING)
+            with conn.cursor() as cur:
+                cur.execute(sql, tuple(params))
+                rows = cur.fetchall()
 
         if not rows:
             return None
@@ -329,30 +389,73 @@ def landing():
     return redirect("/setup")
 
 
-@app.route("/search", methods=["POST"])
+@app.route("/search", methods=["GET", "POST"])
 def search():
+    # Post/Redirect/Get: turn any form POST into a canonical GET request so that
+    # Back/Forward, refresh, and history navigation never re-POST or hit a 405.
+    if request.method == "POST":
+        return redirect(url_for("search", **request.form.to_dict()), code=303)
+
     start = time.time()
-    inp = request.form.get("nm", "").strip()
+    inp = normalize_text(request.args.get("nm") or request.args.get("q") or "")
 
     # Parse Advanced Search keywords. Input may be comma-, space-, or
     # newline-delimited; terms shorter than 3 chars and empty tokens are ignored,
-    # and the list is capped at 5 terms.
-    substances = normalize_search_terms(request.form.get("substances", ""))
+    # and the list is capped at 5 terms. Terms are lowercased and stripped of
+    # hidden whitespace before querying.
+    substances = normalize_search_terms(request.args.get("substances", ""))
 
-    # Parse cluster threshold filters. Only a single cluster may be selected;
-    # the first active cluster is honoured and its threshold is floored at 70%.
+    # Parse cluster threshold filters. A cluster column is selected via the
+    # `cluster` field (legacy `threshold` acts as the lower bound); generic
+    # min_threshold/max_threshold default to 75/100 and are read from either GET
+    # or POST data. Per-cluster inline fields remain supported as a fallback.
+    selected_cluster = (
+        request.values.get("cluster")
+        or request.values.get("cluster_col")
+        or request.values.get("order_by_cluster")
+    )
+    if selected_cluster not in CLUSTER_COLUMNS:
+        selected_cluster = next(
+            (
+                c for c in CLUSTER_COLUMNS
+                if any(
+                    request.values.get(f"{name}_{c}") not in (None, "")
+                    for name in ("min_threshold", "max_threshold", "threshold")
+                )
+            ),
+            None,
+        )
+
+    def _to_float(value: object, default: float) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return float(default)
+
+    min_threshold = float(MIN_CLUSTER_THRESHOLD)
+    max_threshold = float(MAX_CLUSTER_THRESHOLD)
     thresholds = {}
-    for col_name in CLUSTER_COLUMNS:
-        t_val = request.form.get(f"threshold_{col_name}")
-        if t_val is not None and t_val.strip() != "":
-            try:
-                thresholds[col_name] = max(MIN_CLUSTER_THRESHOLD, float(t_val.strip()))
-            except ValueError:
-                pass
-            break
+    if selected_cluster in CLUSTER_COLUMNS:
+        min_raw = request.values.get(f"min_threshold_{selected_cluster}") or request.values.get("min_threshold")
+        max_raw = request.values.get(f"max_threshold_{selected_cluster}") or request.values.get("max_threshold")
+        legacy_raw = request.values.get(f"threshold_{selected_cluster}") or request.values.get("threshold")
+        if min_raw in (None, "") and legacy_raw not in (None, ""):
+            min_raw = legacy_raw
+        if min_raw not in (None, ""):
+            min_threshold = _to_float(min_raw, MIN_CLUSTER_THRESHOLD)
+        if max_raw not in (None, ""):
+            max_threshold = _to_float(max_raw, MAX_CLUSTER_THRESHOLD)
+        thresholds[selected_cluster] = {"min": min_threshold, "max": max_threshold}
+
+    # Enforce mutual exclusivity between keyword and cluster threshold search:
+    # keywords take priority, so any selected cluster/threshold parameters are
+    # discarded and never used to filter or constrain keyword results.
+    if substances:
+        selected_cluster = None
+        thresholds = {}
 
     # Parse skip_svg option
-    skip_svg = bool(request.form.get("skip_svg"))
+    skip_svg = bool(request.args.get("skip_svg"))
 
     # Validate that at least one filter criterion is active (Case D is invalid)
     if not inp and not substances and not thresholds:
@@ -375,7 +478,12 @@ def search():
 
     counter = session.get("count", [time.strftime("%Y-%m-%d"), 0])
     if counter[1] >= MAX_SEARCH_COUNT:
-        return render_template("main.html", max_reached=True)
+        return render_template(
+            "main.html",
+            max_reached=True,
+            min_threshold=min_threshold,
+            max_threshold=max_threshold,
+        )
 
     today = time.strftime("%Y-%m-%d")
     if counter[0] != today:
@@ -402,17 +510,15 @@ def search():
     if substances:
         display_query = ", ".join(substances)
         if thresholds:
-            thresh_desc = ", ".join([
-                f"{CLUSTER_DISPLAY_NAMES.get(col, col)} (≥{int(v) if v.is_integer() else v}%)"
-                for col, v in thresholds.items()
-            ])
+            thresh_desc = ", ".join(
+                describe_threshold(col, spec) for col, spec in thresholds.items()
+            )
             display_query += f" + Cluster filter: {thresh_desc}"
     elif thresholds:
         # User searched purely by cluster thresholds
-        thresh_desc = ", ".join([
-            f"{CLUSTER_DISPLAY_NAMES.get(col, col)} (≥{int(v) if v.is_integer() else v}%)"
-            for col, v in thresholds.items()
-        ])
+        thresh_desc = ", ".join(
+            describe_threshold(col, spec) for col, spec in thresholds.items()
+        )
         display_query = f"Cluster filter: {thresh_desc}"
     else:
         display_query = inp
@@ -426,15 +532,17 @@ def search():
         for s in substances:
             active_filters.append({"type": "substance", "label": s})
     if thresholds:
-        for col, v in thresholds.items():
+        for col, spec in thresholds.items():
             cname = CLUSTER_DISPLAY_NAMES.get(col, col)
-            val_fmt = int(v) if v.is_integer() else v
+            lo = spec.get("min")
+            hi = spec.get("max")
             active_filters.append({
                 "type": "cluster",
                 "key": col,
-                "label": f"{cname} ≥ {val_fmt}%",
+                "label": describe_threshold(col, spec),
                 "cluster_name": cname,
-                "val": val_fmt,
+                "min": format_threshold_value(lo) if lo is not None else None,
+                "max": format_threshold_value(hi) if hi is not None else None,
             })
 
     active_filter_count = len(active_filters)
@@ -459,6 +567,8 @@ def search():
         active_filter_count=active_filter_count,
         substances=substances,
         thresholds=thresholds,
+        min_threshold=min_threshold,
+        max_threshold=max_threshold,
         skip_svg=skip_svg,
         tmpfile_url="",
         max_reached=False,

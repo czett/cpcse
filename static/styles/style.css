@@ -750,37 +750,100 @@ html, body {
     display: none !important;
 }
 
-.threshold-slider-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.range-slider-container {
+    position: relative;
+    height: 20px;
+    margin: 6px 0;
 }
 
-.threshold-symbol {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--primary-blue);
-    font-family: 'Fira Code', monospace;
-}
-
-.threshold-slider {
-    flex: 1;
-    accent-color: var(--primary-blue);
+.slider-track {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 0;
+    right: 0;
     height: 4px;
+    border-radius: 2px;
+    background: #e2e8f0;
+}
+
+.range-slider-container input[type="range"] {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 0;
+    width: 100%;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background: transparent;
+    accent-color: var(--primary-blue);
+    cursor: pointer;
+    pointer-events: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.range-slider-container input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    background: transparent;
+}
+
+.range-slider-container input[type="range"]::-moz-range-track {
+    height: 4px;
+    background: transparent;
+}
+
+.range-slider-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    pointer-events: auto;
+    width: 14px;
+    height: 14px;
+    margin-top: calc((4px - 14px) / 2);
+    border-radius: 50%;
+    background: var(--primary-blue);
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     cursor: pointer;
 }
 
-.threshold-val-box {
-    font-family: 'Fira Code', monospace;
-    font-size: 0.75rem;
-    font-weight: 600;
-    background: #eff6ff;
+.range-slider-container input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+    width: 14px;
+    height: 14px;
+    margin-top: calc((4px - 14px) / 2);
+    border-radius: 50%;
+    background: var(--primary-blue);
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}
+
+.range-min,
+.range-max {
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.slider-badge {
+    display: inline-block;
+    width: fit-content;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
     color: #1d4ed8;
+    background-color: #eff6ff;
     border: 1px solid #bfdbfe;
-    padding: 2px 6px;
     border-radius: 4px;
-    min-width: 40px;
-    text-align: center;
+    padding: 1px 6px;
+    margin-top: 8px;
+    align-self: center;
+}
+
+.slider-badge .badge-label {
+    font-family: 'Fira Code', monospace;
 }
 
 /* Rendering Option Checkbox */
@@ -886,7 +949,7 @@ html, body {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 16px;
+    margin-top: 16px !important;
     flex-wrap: wrap;
 }
 
@@ -978,6 +1041,19 @@ html, body {
 
 /* Keep superscript charges (e.g. Na+/K+) raised without inflating the line box */
 .cluster-item sup {
+    font-size: 0.7em;
+    line-height: 0;
+    vertical-align: 0.45em;
+}
+
+/* Superscripts inside labels: raised and neatly aligned without distorting line height */
+label sup,
+.adv-field-label sup,
+.adv-checkbox-label sup,
+.cluster-check-text sup,
+.cluster-label sup,
+.mobile-metric-label sup,
+.partner-label sup {
     font-size: 0.7em;
     line-height: 0;
     vertical-align: 0.45em;
