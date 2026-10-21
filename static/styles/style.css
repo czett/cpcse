@@ -1303,7 +1303,10 @@ label sup,
 }
 
 .section-eyebrow-row .eyebrow-data-aligned {
-    position: static;
+    position: sticky;
+    left: 231px;
+    z-index: 11;
+    background: #ffffff;
     padding-left: 0;
 }
 
@@ -1349,6 +1352,10 @@ label sup,
 @media (max-width: 768px) {
     .section-eyebrow-row .section-eyebrow:first-child {
         flex-basis: 141px;
+    }
+
+    .section-eyebrow-row .eyebrow-data-aligned {
+        left: 141px;
     }
 
     /* Card view: let the results-layout gap alone set the spacing so the space
