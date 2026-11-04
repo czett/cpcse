@@ -136,6 +136,38 @@ def format_threshold_value(v: float) -> Union[str, float, int]:
     return int(f) if f.is_integer() else f
 
 
+def format_conc_value(v: Union[float, int, str]) -> str:
+    """Render a concentration value without trailing .0 for integers (e.g. 10 instead of 10.0)."""
+    f = float(v)
+    return str(int(f)) if f.is_integer() else str(f)
+
+
+def normalize_concentration_filters(raw: Optional[Union[str, List[str]]]) -> List[float]:
+    """Parse comma-separated or multi-value concentration inputs into a sorted list of floats."""
+    if not raw:
+        return []
+    items: List[str] = []
+    if isinstance(raw, list):
+        for part in raw:
+            if part:
+                items.extend(str(part).split(","))
+    elif isinstance(raw, str):
+        items = raw.split(",")
+    concs: List[float] = []
+    for item in items:
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            val = float(item)
+            if val not in concs:
+                concs.append(val)
+        except (ValueError, TypeError):
+            continue
+    concs.sort()
+    return concs
+
+
 def describe_threshold(col: str, spec: dict) -> str:
     """Human-readable description of a min/max cluster threshold range."""
     cname = CLUSTER_DISPLAY_NAMES.get(col, col)
@@ -201,6 +233,7 @@ def find_compounds(
     query: Optional[str] = None,
     substances: Optional[List[str]] = None,
     thresholds: Optional[dict] = None,
+    conc_values: Optional[List[float]] = None,
     skip_svg: bool = False,
     order_by_cluster: Optional[str] = None,
     limit: Optional[int] = None,
@@ -244,7 +277,13 @@ def find_compounds(
                 conditions.append(f"c.{col_name} <= %s")
                 params.append(float(t_max))
 
-    # If neither query, substances, nor thresholds are provided, return early
+    # 4. Concentration filtering (c.conc_um IN (...))
+    if conc_values:
+        placeholders = ", ".join(["%s"] * len(conc_values))
+        conditions.append(f"c.conc_um IN ({placeholders})")
+        params.extend([float(v) for v in conc_values])
+
+    # If neither query, substances, thresholds, nor concentration are provided, return early
     if not conditions:
         return None
 
@@ -394,10 +433,21 @@ def search():
     # Post/Redirect/Get: turn any form POST into a canonical GET request so that
     # Back/Forward, refresh, and history navigation never re-POST or hit a 405.
     if request.method == "POST":
-        return redirect(url_for("search", **request.form.to_dict()), code=303)
+        form_dict = request.form.to_dict()
+        conc_list = request.form.getlist("conc")
+        if conc_list:
+            # Flatten to comma-separated values (e.g. conc=10,30)
+            form_dict["conc"] = ",".join(c.strip() for c in conc_list if c.strip())
+        elif "conc" in form_dict and not form_dict["conc"]:
+            form_dict.pop("conc", None)
+        return redirect(url_for("search", **form_dict), code=303)
 
     start = time.time()
     inp = normalize_text(request.args.get("nm") or request.args.get("q") or "")
+
+    # Parse concentration filters (conc=10,30 or repeated conc args)
+    raw_conc = request.args.getlist("conc") if len(request.args.getlist("conc")) > 1 else request.args.get("conc")
+    conc_values = normalize_concentration_filters(raw_conc)
 
     # Parse Advanced Search keywords. Input may be comma-, space-, or
     # newline-delimited; terms shorter than 3 chars and empty tokens are ignored,
@@ -458,11 +508,12 @@ def search():
     skip_svg = bool(request.args.get("skip_svg"))
 
     # Validate that at least one filter criterion is active (Case D is invalid)
-    if not inp and not substances and not thresholds:
+    if not inp and not substances and not thresholds and not conc_values:
         return redirect("/error")
 
-    # If advanced search parameters (substances or thresholds) are present,
-    # prioritize them and do not restrict by the main top input
+    # If advanced search parameters (substances, thresholds, or concentrations) are present without
+    # an explicit primary keyword input, prioritize them. If a keyword is provided alongside conc_values,
+    # keep inp active so compounds matching the query are filtered by concentration.
     if substances or thresholds:
         inp = ""
 
@@ -475,6 +526,10 @@ def search():
             return redirect("/error")
         order_by_cluster = plan["order_by_cluster"]
         limit = plan["limit"]
+    elif conc_values and not inp:
+        # Guardrail: searching purely by concentration without keyword or cluster
+        # enforces a strict LIMIT to prevent an unbounded full-table dump.
+        limit = 50
 
     counter = session.get("count", [time.strftime("%Y-%m-%d"), 0])
     if counter[1] >= MAX_SEARCH_COUNT:
@@ -496,6 +551,7 @@ def search():
         query=inp if inp else None,
         substances=substances if substances else None,
         thresholds=thresholds if thresholds else None,
+        conc_values=conc_values if conc_values else None,
         skip_svg=skip_svg,
         order_by_cluster=order_by_cluster,
         limit=limit,
@@ -506,6 +562,8 @@ def search():
     end = time.time()
     elapsed_ms = int((end - start) * 1000)
 
+    conc_desc = f"Conc: {', '.join(format_conc_value(c) for c in conc_values)} µM" if conc_values else ""
+
     # Determine informative display query label
     if substances:
         display_query = ", ".join(substances)
@@ -514,14 +572,22 @@ def search():
                 describe_threshold(col, spec) for col, spec in thresholds.items()
             )
             display_query += f" + Cluster filter: {thresh_desc}"
+        if conc_desc:
+            display_query += f" + {conc_desc}"
     elif thresholds:
         # User searched purely by cluster thresholds
         thresh_desc = ", ".join(
             describe_threshold(col, spec) for col, spec in thresholds.items()
         )
         display_query = f"Cluster filter: {thresh_desc}"
-    else:
+        if conc_desc:
+            display_query += f" + {conc_desc}"
+    elif inp:
         display_query = inp
+        if conc_desc:
+            display_query += f" + {conc_desc}"
+    else:
+        display_query = conc_desc or "All Compounds"
 
     # Case B (cluster-only) returns the top 10 highest-scoring profiles
     if limit:
@@ -544,6 +610,13 @@ def search():
                 "min": format_threshold_value(lo) if lo is not None else None,
                 "max": format_threshold_value(hi) if hi is not None else None,
             })
+    if conc_values:
+        active_filters.append({
+            "type": "concentration",
+            "key": "conc",
+            "label": f"Conc: {', '.join(format_conc_value(c) for c in conc_values)} µM",
+            "values": conc_values,
+        })
 
     active_filter_count = len(active_filters)
 
@@ -551,6 +624,7 @@ def search():
         "query": inp if inp else None,
         "substances": substances if substances else None,
         "thresholds": thresholds if thresholds else None,
+        "conc_values": conc_values if conc_values else None,
         "order_by_cluster": order_by_cluster,
         "limit": limit,
         "skip_svg": True,  # Text export never needs SVG
@@ -567,6 +641,7 @@ def search():
         active_filter_count=active_filter_count,
         substances=substances,
         thresholds=thresholds,
+        conc_values=conc_values,
         min_threshold=min_threshold,
         max_threshold=max_threshold,
         skip_svg=skip_svg,
@@ -595,6 +670,7 @@ def download(fname: Optional[str] = None):
             query=last_search.get("query"),
             substances=last_search.get("substances"),
             thresholds=last_search.get("thresholds"),
+            conc_values=last_search.get("conc_values"),
             skip_svg=True,
             order_by_cluster=last_search.get("order_by_cluster"),
             limit=last_search.get("limit"),

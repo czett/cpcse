@@ -442,6 +442,54 @@ html, body {
     flex-wrap: wrap;
 }
 
+/* Concentration Filter Pills */
+.conc-filters-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.conc-pill-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #334155;
+    transition: all 0.15s ease;
+    user-select: none;
+    line-height: 1.2;
+}
+
+.conc-pill-label:hover {
+    border-color: #93c5fd;
+    background: #f8fafc;
+    color: #1e40af;
+}
+
+.conc-pill-check {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--primary-blue);
+    cursor: pointer;
+    margin: 0;
+}
+
+.conc-pill-label:has(.conc-pill-check:checked) {
+    background: #eff6ff;
+    border-color: var(--primary-blue);
+    color: #1d4ed8;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+}
+
 .active-filter-chip {
     display: inline-flex;
     align-items: center;
@@ -455,6 +503,28 @@ html, body {
     border-radius: 9999px;
     line-height: 1.4;
 }
+
+.chip-remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #3b82f6;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    margin-left: 2px;
+    border-radius: 3px;
+    text-decoration: none;
+}
+
+.chip-remove-btn:hover {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
 
 .chip-filter-dot {
     width: 5px;

@@ -113,6 +113,26 @@
 						</div>
 					</div>
 
+					<hr class="border-t border-slate-200 my-4">
+
+					<!-- Section 3: Concentration Filter (Conc uM) -->
+					<div class="adv-section">
+						<h3 class="adv-panel-title">Concentration (&mu;M)</h3>
+						<p class="adv-section-subtitle text-slate-500 text-xs" style="font-size: 12px; font-weight: 400; color: #64748b; line-height: 1.4; margin-top: 2px; margin-bottom: 8px;">Filter compounds tested at specific concentration tiers</p>
+						<div class="adv-field-group">
+							<div class="conc-filters-wrap" id="conc-filters-wrap">
+								{% for c_val in ['0.2', '1', '2', '3', '10', '30', '50'] %}
+								<label class="conc-pill-label">
+									<input type="checkbox" name="conc" value="{{ c_val }}" class="conc-pill-check">
+									<span>{{ c_val }} &mu;M</span>
+								</label>
+								{% endfor %}
+							</div>
+						</div>
+					</div>
+
+					<hr class="border-t border-slate-200 my-4">
+
 					<!-- Option C: Rendering Options (Skip SVG Structure) -->
 					<div class="adv-field-group">
 						<label class="adv-checkbox-option" style="display: flex; align-items: center;">
@@ -302,6 +322,37 @@
 				initClusterTileClick();
 				document.addEventListener('DOMContentLoaded', initClusterTileClick);
 			})();
+
+			function resetAdvancedFilters() {
+				// 1. Clear tags
+				if (typeof substancesList !== 'undefined') {
+					substancesList = [];
+					if (typeof renderTags === 'function') renderTags();
+					if (typeof syncSubstancesHidden === 'function') syncSubstancesHidden();
+				}
+				var tagInput = document.getElementById('tag-text-input');
+				if (tagInput) tagInput.value = '';
+
+				// 2. Uncheck all cluster filters
+				var checks = document.querySelectorAll('.cluster-filter-check');
+				checks.forEach(function(chk) {
+					chk.checked = false;
+					var key = chk.getAttribute('data-cluster');
+					if (key && typeof toggleClusterFilter === 'function') toggleClusterFilter(key, false);
+				});
+
+				// 3. Uncheck all concentration pills
+				document.querySelectorAll('.conc-pill-check').forEach(function(chk) {
+					chk.checked = false;
+				});
+
+				// 4. Uncheck skip SVG rendering option
+				var skipCheck = document.getElementById('skip-svg-check');
+				if (skipCheck) skipCheck.checked = false;
+
+				// 5. Clear any inline validation hint
+				if (typeof clearAdvancedHint === 'function') clearAdvancedHint();
+			}
 		</script>
 	</div>
 

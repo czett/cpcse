@@ -516,10 +516,15 @@ function resetAdvancedFilters() {
 		if (key) toggleClusterFilter(key, false);
 	});
 
-	// 3. Uncheck skip SVG rendering option
+	// 3. Uncheck all concentration pills
+	document.querySelectorAll(".conc-pill-check").forEach(function(chk) {
+		chk.checked = false;
+	});
+
+	// 4. Uncheck skip SVG rendering option
 	var skipCheck = document.getElementById("skip-svg-check");
 	if (skipCheck) skipCheck.checked = false;
 
-	// 4. Clear any inline validation hint
+	// 5. Clear any inline validation hint
 	clearAdvancedHint();
 }
