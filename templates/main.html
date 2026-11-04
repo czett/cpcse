@@ -249,11 +249,11 @@
 							<div class="cluster-threshold-ctrl{% if not conc_active %} hidden{% endif %}" id="conc-threshold-ctrl">
 								<div class="range-slider-container conc-range-slider" data-conc="1">
 									<div class="slider-track"></div>
-									<input type="range" class="range-min" id="conc-range-min" min="0" max="100" value="{{ conc_min_value }}" step="0.1" data-default="0.2" form="results-search-form">
-									<input type="range" class="range-max" id="conc-range-max" min="0" max="100" value="{{ conc_max_value }}" step="0.1" data-default="50" form="results-search-form">
+									<input type="range" class="range-min" id="conc-range-min" min="0.01" max="100" value="{{ conc_min_value if conc_active else '10' }}" step="0.01" data-default="10" form="results-search-form">
+									<input type="range" class="range-max" id="conc-range-max" min="0.01" max="100" value="{{ conc_max_value }}" step="0.01" data-default="50" form="results-search-form">
 								</div>
 								<div class="slider-badge">
-									<span class="range-val-min">{{ conc_min_value }} &micro;M</span> &ndash; <span class="range-val-max">{{ conc_max_value }} &micro;M</span>
+									<span class="range-val-min">{{ conc_min_value if conc_active else '10' }} &micro;M</span> &ndash; <span class="range-val-max">{{ conc_max_value }} &micro;M</span>
 								</div>
 								<input type="hidden" name="min_conc" id="conc-min-input" value="{{ conc_min_value if conc_active else '' }}"{% if not conc_active %} disabled{% endif %} form="results-search-form">
 								<input type="hidden" name="max_conc" id="conc-max-input" value="{{ conc_max_value if conc_active else '' }}"{% if not conc_active %} disabled{% endif %} form="results-search-form">
@@ -475,7 +475,7 @@
 				var concMin = document.getElementById('conc-range-min');
 				var concMax = document.getElementById('conc-range-max');
 				if (concMin && concMax) {
-					concMin.value = concMin.getAttribute('data-default') || '0.2';
+					concMin.value = concMin.getAttribute('data-default') || '10';
 					concMax.value = concMax.getAttribute('data-default') || '50';
 					concMin.dispatchEvent(new Event('input', { bubbles: true }));
 				}
@@ -588,7 +588,7 @@
 										{% endif %}
 									</div>
 								{% elif r == 4 %}
-									<div class="value img-value {{ row_class }}">
+									<div class="value img-value {{ row_class }}" data-compound-name="{{ col[0] }}">
 										{{ val | safe }}
 									</div>
 								{% elif r == 5 %}
@@ -703,7 +703,7 @@
 						<th class="tp-sticky-col tp-compound-cell" scope="row">
 							<div class="tp-compound-inner">
 								{% if not skip_svg and col[4] %}
-								<div class="tp-structure">
+								<div class="tp-structure" data-compound-name="{{ col[0] }}">
 									{% if "<svg" in col[4] %}
 										{{ col[4] | safe }}
 									{% else %}
@@ -828,7 +828,7 @@
 
 				{% if not skip_svg %}
 				{% set is_duplicate_compound = (col_idx > 1 and col[1] == output[col_idx - 1][1]) %}
-				<div class="mobile-structure-box{% if is_duplicate_compound %} is-collapsed{% endif %}">
+				<div class="mobile-structure-box{% if is_duplicate_compound %} is-collapsed{% endif %}" data-compound-name="{{ col_trivial_name }}">
 					{% if is_duplicate_compound %}
 						<details class="structure-accordion">
 							<summary class="structure-toggle-summary">
@@ -839,7 +839,7 @@
 								{% if col[4] and "<svg" in col[4] %}
 									{{ col[4] | safe }}
 								{% else %}
-									<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+									<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure of {{ col_trivial_name }}" class="mobile-structure-img">
 								{% endif %}
 							</div>
 						</details>
@@ -847,7 +847,7 @@
 						{% if col[4] and "<svg" in col[4] %}
 							{{ col[4] | safe }}
 						{% else %}
-							<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+							<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure of {{ col_trivial_name }}" class="mobile-structure-img">
 						{% endif %}
 					{% endif %}
 				</div>
@@ -932,5 +932,17 @@
 		</div>
 	</div>
 	{% endif %}
+</div>
+
+<!-- Structure Preview Modal -->
+<div id="structure-modal" class="structure-modal d-none" aria-hidden="true">
+	<div class="structure-modal-backdrop"></div>
+	<div class="structure-modal-content">
+		<button type="button" class="structure-modal-close" aria-label="Close">&times;</button>
+		<div class="structure-modal-body">
+			<img id="structure-modal-img" src="" alt="Chemical structure preview">
+			<p id="structure-modal-title" class="structure-modal-caption"></p>
+		</div>
+	</div>
 </div>
 {% endblock %}

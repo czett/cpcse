@@ -681,3 +681,75 @@ function resetAdvancedFilters() {
 	// 5. Clear any inline validation hint
 	clearAdvancedHint();
 }
+
+// Structure preview modal
+(function() {
+	function getStructureSrc(el) {
+		if (el.tagName && el.tagName.toLowerCase() === "img") {
+			return el.currentSrc || el.src;
+		}
+		var clone = el.cloneNode(true);
+		if (!clone.getAttribute("xmlns")) {
+			clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+		}
+		var markup = new XMLSerializer().serializeToString(clone);
+		return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(markup);
+	}
+
+	function getStructureName(el) {
+		var holder = el.closest("[data-compound-name]");
+		if (holder) {
+			var holderName = holder.getAttribute("data-compound-name");
+			if (holderName) return holderName;
+		}
+		var alt = el.getAttribute("alt") || "";
+		var name = alt.replace(/^Structure of /, "").replace(/^Structure$/, "");
+		if (name) return name;
+		var card = el.closest(".mobile-compound-card");
+		var title = card ? card.querySelector(".mobile-compound-title") : null;
+		return title ? title.textContent.trim() : "";
+	}
+
+	function openStructureModal(img) {
+		var modal = document.getElementById("structure-modal");
+		var modalImg = document.getElementById("structure-modal-img");
+		var modalTitle = document.getElementById("structure-modal-title");
+		if (!modal || !modalImg || !modalTitle) return;
+
+		modalImg.src = getStructureSrc(img);
+		modalTitle.textContent = getStructureName(img);
+		modal.classList.remove("d-none");
+		modal.setAttribute("aria-hidden", "false");
+	}
+
+	function closeStructureModal() {
+		var modal = document.getElementById("structure-modal");
+		if (!modal) return;
+		modal.classList.add("d-none");
+		modal.setAttribute("aria-hidden", "true");
+	}
+
+	document.addEventListener("click", function(event) {
+		var structure = event.target.closest(
+			".img-value img, .img-value svg, .tp-structure img, .tp-structure svg, .mobile-structure-box img, .mobile-structure-box svg, .structure-content img, .structure-content svg"
+		);
+		if (structure && !structure.closest("#structure-modal")) {
+			event.preventDefault();
+			openStructureModal(structure);
+			return;
+		}
+
+		var modal = document.getElementById("structure-modal");
+		if (!modal || modal.classList.contains("d-none")) return;
+
+		if (event.target.closest(".structure-modal-close") || event.target.classList.contains("structure-modal-backdrop")) {
+			closeStructureModal();
+		}
+	});
+
+	document.addEventListener("keydown", function(event) {
+		if (event.key === "Escape") {
+			closeStructureModal();
+		}
+	});
+})();
