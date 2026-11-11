@@ -8,3 +8,4 @@ CHANGELOG.md
 venv
 .github
 myenv
+temp/

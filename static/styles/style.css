@@ -689,6 +689,11 @@ html, body {
     color: var(--muted-foreground);
 }
 
+/* Concentration Range Filter (matches the cluster threshold card) */
+.conc-filter-card {
+    max-width: 420px;
+}
+
 /* Cluster Thresholds Grid */
 .cluster-filters-grid {
     display: grid;
@@ -840,10 +845,6 @@ html, body {
     padding: 1px 6px;
     margin-top: 8px;
     align-self: center;
-}
-
-.slider-badge .badge-label {
-    font-family: 'Fira Code', monospace;
 }
 
 /* Rendering Option Checkbox */
@@ -1211,6 +1212,169 @@ label sup,
     gap: 10px;
 }
 
+/* Sort, page-size, and pagination controls */
+.results-controls-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+}
+
+.results-controls-bar .quick-search-section {
+    margin-top: 0 !important;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.results-controls-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-left: auto;
+}
+
+.results-control-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.results-control-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+}
+
+.ui-select {
+    height: 36px;
+    background-color: #ffffff;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0 32px 0 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1e293b;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.ui-select:hover {
+    border-color: #94a3b8;
+    background-color: #f8fafc;
+}
+
+.ui-select:focus,
+.ui-select:focus-visible {
+    border-color: var(--primary-blue);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.sort-order-btn {
+    height: 36px;
+    width: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    color: #1e293b;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    line-height: 1;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sort-order-btn:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.sort-order-btn:focus,
+.sort-order-btn:focus-visible {
+    border-color: var(--primary-blue);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.sort-order-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: var(--secondary);
+}
+
+.sort-order-arrow {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+}
+
+.pagination-summary strong {
+    color: var(--card-foreground);
+    font-weight: 600;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--card-foreground);
+    text-decoration: none;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.pagination-btn:hover {
+    background: var(--secondary);
+}
+
+.pagination-btn.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: var(--card);
+}
+
+.pagination-indicator {
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    padding: 0 4px;
+}
+
 .legend-bar {
     display: flex;
     align-items: center;
@@ -1350,6 +1514,79 @@ label sup,
 }
 
 @media (max-width: 768px) {
+    .results-controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .results-controls-bar .quick-search-section {
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .results-controls-bar .quick-search-section .quick-label {
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .results-controls-bar .quick-search-section .quick-pills {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        width: 100%;
+        padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .results-controls-bar .quick-search-section .quick-pills::-webkit-scrollbar {
+        display: none;
+    }
+
+    .results-controls-bar .quick-search-section .pill-btn {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    .results-controls-form {
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 8px;
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .results-control-group {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .results-control-group .results-control-label {
+        font-size: 0.75rem;
+    }
+
+    .results-control-group .ui-select {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: 100%;
+    }
+
+    .results-control-group .sort-order-btn {
+        flex-shrink: 0;
+    }
+
     .section-eyebrow-row .section-eyebrow:first-child {
         flex-basis: 141px;
     }
@@ -1560,6 +1797,7 @@ label sup,
     aspect-ratio: 1 / 1;
     object-fit: contain;
     display: block;
+    cursor: pointer;
 }
 
 .structure-image {
@@ -1616,9 +1854,11 @@ label sup,
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 44px;
+    height: 34px;
     width: calc(100% - 8px);
-    height: calc(100% - 6px);
     margin: 3px 4px;
+    padding: 4px 10px;
     border-radius: 8px;
     font-weight: 600;
     box-sizing: border-box;
@@ -2184,6 +2424,422 @@ label sup,
 }
 
 /* ==========================================================================
+   DESKTOP TRANSPOSED RESULTS TABLE (Desktop ONLY, >= 1024px)
+   Compounds as rows, features as columns, with a pinned identifier column.
+   ========================================================================== */
+
+/* Hidden on mobile and tablet; the existing matrix/cards views stay untouched. */
+.desktop-view-toggle,
+.desktop-transposed-wrapper {
+    display: none;
+}
+
+.desktop-view-toggle .view-icon {
+    flex-shrink: 0;
+}
+
+.desktop-view-toggle .view-toggle-btn {
+    gap: 6px;
+}
+
+.transposed-scroll {
+    width: 100%;
+    max-height: calc(100vh - 190px);
+    overflow: auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    -webkit-overflow-scrolling: touch;
+}
+
+.transposed-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: max-content;
+    min-width: 100%;
+    font-size: 0.8125rem;
+    color: var(--card-foreground);
+}
+
+.transposed-table th,
+.transposed-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    text-align: center;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
+.transposed-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+    padding: 12px 4px;
+    vertical-align: middle !important;
+    text-align: center;
+    line-height: 1.25;
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+.transposed-table tbody th,
+.transposed-table tbody td {
+    min-height: 56px;
+    background: var(--card);
+}
+
+.transposed-table tbody tr:hover td,
+.transposed-table tbody tr:hover .tp-compound-cell {
+    background: #f8fafc;
+}
+
+/* Pinned identifier column */
+.transposed-table .tp-sticky-col {
+    position: sticky;
+    left: 0;
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+    padding: 10px 12px;
+    text-align: left;
+    z-index: 3;
+    background: var(--card);
+    box-shadow: 2px 0 4px -2px rgba(15, 23, 42, 0.12);
+}
+
+.transposed-table thead .tp-corner {
+    z-index: 7;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.tp-compound-cell {
+    font-weight: 400;
+}
+
+.tp-compound-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.tp-structure {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.tp-structure svg,
+.tp-structure img {
+    max-width: 60px;
+    max-height: 60px;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain;
+    display: block;
+}
+
+.tp-compound-name-wrap {
+    min-width: 0;
+    flex: 1;
+}
+
+.tp-compound-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.tp-compound-name:hover {
+    color: var(--primary-blue);
+}
+
+/* Sortable headers in the transposed Rows table */
+.transposed-table th[data-sort-key] {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+}
+
+.transposed-table th[data-sort-key] .tp-cluster-label {
+    transition: color 0.15s ease;
+}
+
+.transposed-table th[data-sort-key]:hover,
+.transposed-table th[data-sort-key]:hover .tp-cluster-label {
+    color: var(--primary-blue);
+}
+
+.transposed-table th[data-sort-key].is-sorted,
+.transposed-table th[data-sort-key].is-sorted .tp-cluster-label {
+    color: var(--primary-blue);
+}
+
+.transposed-table .tp-sort-arrow {
+    display: inline-block;
+    margin-left: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--primary-blue);
+}
+
+/* Metadata columns */
+.transposed-table .tp-meta-col {
+    width: 84px;
+    min-width: 84px;
+    max-width: 84px;
+    text-align: center;
+    vertical-align: middle !important;
+    padding: 12px 4px;
+    line-height: 1.25;
+    box-sizing: border-box;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+.transposed-table .tp-meta-cell {
+    width: 84px;
+    min-width: 84px;
+    max-width: 84px;
+    height: 56px;
+    min-height: 56px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 6px 4px;
+    box-sizing: border-box;
+    white-space: nowrap;
+    color: var(--card-foreground);
+}
+
+.transposed-table .tp-batch-col,
+.transposed-table .tp-batch-col.tp-meta-cell,
+.transposed-table .tp-meta-cell.tp-batch-col {
+    width: 52px;
+    min-width: 52px;
+    max-width: 52px;
+    text-align: center;
+}
+
+.transposed-table .tp-conc-col,
+.transposed-table .tp-meta-cell.tp-conc-col {
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
+    text-align: center;
+}
+
+.transposed-table .tp-cellcount-col,
+.transposed-table .tp-meta-cell.tp-cellcount-col {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    text-align: center;
+}
+
+.transposed-table .tp-induction-col,
+.transposed-table .tp-meta-cell.tp-induction-col {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    text-align: center;
+}
+
+.transposed-table .tp-smiles-col {
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    text-align: center;
+    padding: 10px 2px;
+}
+
+.transposed-table .tp-smiles-cell {
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    text-align: center;
+    padding: 6px 2px;
+    white-space: nowrap;
+}
+
+.tp-smiles-cell {
+    display: table-cell;
+    cursor: pointer;
+}
+
+.tp-smiles-cell .tp-smiles-text {
+    display: inline-block;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.78rem;
+}
+
+.tp-smiles-cell .copy-icon-img {
+    margin-left: 0;
+    vertical-align: middle;
+}
+
+.tp-smiles-cell:hover {
+    background: var(--secondary);
+    color: var(--primary-blue);
+}
+
+/* Bioactivity cluster columns */
+.transposed-table .tp-cluster-col {
+    width: 76px;
+    min-width: 76px;
+    max-width: 76px;
+    padding: 12px 4px;
+    height: auto;
+    min-height: 0 !important;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+    overflow: hidden;
+    text-align: center;
+    vertical-align: middle !important;
+    line-height: 1.25;
+    box-sizing: border-box;
+}
+
+.transposed-table .tp-cluster-label {
+    display: block;
+    max-width: 76px;
+    overflow: hidden;
+    box-sizing: border-box;
+    text-align: center;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+    font-size: 11px;
+    line-height: 1.25;
+    font-weight: 600;
+    color: #475569;
+    margin: 0 auto;
+}
+
+.transposed-table .tp-cluster-cell {
+    text-align: center;
+    vertical-align: middle;
+    padding: 6px 2px;
+    min-width: 46px;
+    width: 46px;
+    max-width: 46px;
+    height: 56px;
+    min-height: 56px;
+    box-sizing: border-box;
+}
+
+.transposed-table .tp-cluster-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 28px;
+    padding: 0;
+    margin: 0 auto;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    box-sizing: border-box;
+}
+
+.tp-cluster-badge.nf {
+    background-color: #1e3a8a;
+    color: #ffffff !important;
+}
+
+.tp-cluster-badge.nt {
+    background-color: #2563eb;
+    color: #ffffff !important;
+}
+
+.tp-cluster-badge.ef {
+    background-color: #bfdbfe;
+    color: #1e3a8a !important;
+}
+
+.tp-cluster-badge.et {
+    background-color: #eff6ff;
+    color: #1e40af !important;
+    border: 1px solid #bfdbfe;
+}
+
+.tp-cluster-badge.tp-neutral {
+    background-color: #f1f5f9;
+    color: #334155;
+}
+
+@media (min-width: 1024px) {
+    .desktop-view-toggle {
+        display: inline-flex;
+    }
+
+    .desktop-transposed-wrapper {
+        display: block;
+        width: 100%;
+    }
+
+    /* The inline head script sets html.layout-* before paint, so the saved
+       desktop layout is applied without a flash of the matrix view. */
+    html.layout-transposed #matrix-container {
+        display: none !important;
+    }
+
+    html.layout-matrix #matrix-container {
+        display: block !important;
+    }
+
+    html.layout-matrix .desktop-transposed-wrapper {
+        display: none !important;
+    }
+
+    /* A mobile card choice must never leak into the desktop layout. */
+    #cards-container {
+        display: none !important;
+    }
+}
+
+/* ==========================================================================
    MOBILE BREAKPOINTS: BOTTOM NAV BAR & HORIZONTAL ICON LAYOUT (Mobile ONLY!)
    ========================================================================== */
 
@@ -2377,7 +3033,7 @@ label sup,
         font-size: 0.8rem;
     }
 
-    .quick-search-section {
+    .quick-search-section:not(.results-controls-bar .quick-search-section) {
         flex-direction: column;
         align-items: flex-start;
     }
@@ -2476,5 +3132,160 @@ label sup,
 
     .bottom-nav-item span {
         font-size: 0.75rem;
+    }
+}
+
+/* Structure preview thumbnails */
+.value.img-value svg,
+.value.img-value img,
+.tp-structure img,
+.tp-structure svg,
+.mobile-structure-box img,
+.mobile-structure-box > svg,
+.structure-content img,
+.structure-content svg {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.value.img-value svg:hover,
+.value.img-value img:hover,
+.tp-structure img:hover,
+.tp-structure svg:hover,
+.mobile-structure-box img:hover,
+.mobile-structure-box > svg:hover,
+.structure-content img:hover,
+.structure-content svg:hover {
+    transform: scale(1.05);
+}
+
+/* Structure preview modal */
+.structure-modal.d-none {
+    display: none;
+}
+
+.structure-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.structure-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.structure-modal-content {
+    position: relative;
+    z-index: 1;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 90vw;
+    max-height: 90vh;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+}
+
+.structure-modal-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    color: #64748b;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.structure-modal-close:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.structure-modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+}
+
+#structure-modal-img,
+.structure-modal-body img {
+    max-width: 100%;
+    max-height: 55vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+
+.structure-modal-caption {
+    text-align: center;
+    margin-top: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #1e293b;
+}
+
+#structure-modal-title {
+    word-break: break-word;
+    text-align: center;
+    margin-top: 12px;
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .structure-modal-content {
+        max-width: calc(100vw - 32px);
+        width: 100%;
+        max-height: 85vh;
+        padding: 16px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    #structure-modal-img,
+    .structure-modal-body img {
+        max-width: 100%;
+        max-height: 55vh;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
+        margin: 0 auto;
+    }
+
+    .structure-modal-body img svg,
+    #structure-modal-img svg,
+    .structure-modal-body svg {
+        width: 100% !important;
+        max-width: 320px;
+        height: auto !important;
+    }
+
+    .structure-modal-close {
+        top: 4px;
+        right: 4px;
     }
 }

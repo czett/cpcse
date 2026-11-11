@@ -100,7 +100,6 @@
 											<input type="range" class="range-max" name="max_threshold" min="75" max="100" value="100" step="1">
 										</div>
 										<div class="slider-badge">
-											<span class="badge-label">&ge;</span>
 											<span class="range-val-min">75%</span> &ndash; <span class="range-val-max">100%</span>
 										</div>
 										<input type="hidden" name="threshold_{{ id_key }}" id="input-{{ id_key }}" value="" disabled>
@@ -112,6 +111,37 @@
 							</div>
 						</div>
 					</div>
+
+					<hr class="border-t border-slate-200 my-4">
+
+					<!-- Section 3: Concentration Range Filter (Conc uM) -->
+					<div class="adv-section">
+						<h3 class="adv-panel-title">Concentration (&mu;M)</h3>
+						<p class="adv-section-subtitle text-slate-500 text-xs" style="font-size: 12px; font-weight: 400; color: #64748b; line-height: 1.4; margin-top: 2px; margin-bottom: 8px;">Filter compounds tested within a concentration range</p>
+						<div class="adv-field-group">
+							<div class="cluster-filter-card conc-filter-card" id="conc-filter-card">
+								<label class="cluster-check-label">
+									<input type="checkbox" class="cluster-filter-check" id="conc-filter-check" onchange="toggleConcFilter(this.checked)">
+									<span class="cluster-check-custom"></span>
+									<span class="cluster-check-text">Filter by Concentration (&micro;M)</span>
+								</label>
+								<div class="cluster-threshold-ctrl hidden" id="conc-threshold-ctrl">
+									<div class="range-slider-container conc-range-slider" data-conc="1">
+										<div class="slider-track"></div>
+										<input type="range" class="range-min" id="conc-range-min" min="0.01" max="100" value="0.2" step="0.01" data-default="0.2">
+										<input type="range" class="range-max" id="conc-range-max" min="0.01" max="100" value="50" step="0.01" data-default="50">
+									</div>
+									<div class="slider-badge">
+										<span class="range-val-min">0.2 &micro;M</span> &ndash; <span class="range-val-max">50 &micro;M</span>
+									</div>
+									<input type="hidden" name="min_conc" id="conc-min-input" value="" disabled>
+									<input type="hidden" name="max_conc" id="conc-max-input" value="" disabled>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<hr class="border-t border-slate-200 my-4">
 
 					<!-- Option C: Rendering Options (Skip SVG Structure) -->
 					<div class="adv-field-group">
@@ -219,35 +249,41 @@
 						var maxInput = container.querySelector('.range-max');
 						if (!minInput || !maxInput) { return; }
 
+						var isConc = container.getAttribute('data-conc') === '1';
 						var card = container.closest('.cluster-filter-card');
 						var badge = card ? card.querySelector('.slider-badge') : null;
 						var valMin = badge ? badge.querySelector('.range-val-min') : null;
 						var valMax = badge ? badge.querySelector('.range-val-max') : null;
 						var key = container.getAttribute('data-cluster') || '';
-						var hiddenMin = document.getElementById('input-min-' + key);
-						var hiddenMax = document.getElementById('input-max-' + key);
-						var hiddenLegacy = document.getElementById('input-' + key);
+						var hiddenMin = isConc ? document.getElementById('conc-min-input') : document.getElementById('input-min-' + key);
+						var hiddenMax = isConc ? document.getElementById('conc-max-input') : document.getElementById('input-max-' + key);
+						var hiddenLegacy = isConc ? null : document.getElementById('input-' + key);
 						var checkbox = card ? card.querySelector('.cluster-filter-check') : null;
+						var unit = isConc ? ' \u00b5M' : '%';
+
+						function displayVal(value) {
+							return String(parseFloat(value));
+						}
 
 						function render() {
-							var lo = parseInt(minInput.value, 10);
-							var hi = parseInt(maxInput.value, 10);
-							if (valMin) { valMin.textContent = lo + '%'; }
-							if (valMax) { valMax.textContent = hi + '%'; }
-							if (hiddenMin) { hiddenMin.value = lo; }
-							if (hiddenMax) { hiddenMax.value = hi; }
-							if (hiddenLegacy) { hiddenLegacy.value = lo; }
+							var lo = parseFloat(minInput.value);
+							var hi = parseFloat(maxInput.value);
+							if (valMin) { valMin.textContent = displayVal(lo) + unit; }
+							if (valMax) { valMax.textContent = displayVal(hi) + unit; }
+							if (hiddenMin) { hiddenMin.value = displayVal(lo); }
+							if (hiddenMax) { hiddenMax.value = displayVal(hi); }
+							if (hiddenLegacy) { hiddenLegacy.value = displayVal(lo); }
 						}
 
 						minInput.addEventListener('input', function () {
-							if (parseInt(minInput.value, 10) > parseInt(maxInput.value, 10)) {
+							if (parseFloat(minInput.value) > parseFloat(maxInput.value)) {
 								minInput.value = maxInput.value;
 							}
 							render();
 						});
 
 						maxInput.addEventListener('input', function () {
-							if (parseInt(maxInput.value, 10) < parseInt(minInput.value, 10)) {
+							if (parseFloat(maxInput.value) < parseFloat(minInput.value)) {
 								maxInput.value = minInput.value;
 							}
 							render();
@@ -302,6 +338,46 @@
 				initClusterTileClick();
 				document.addEventListener('DOMContentLoaded', initClusterTileClick);
 			})();
+
+			function resetAdvancedFilters() {
+				// 1. Clear tags
+				if (typeof substancesList !== 'undefined') {
+					substancesList = [];
+					if (typeof renderTags === 'function') renderTags();
+					if (typeof syncSubstancesHidden === 'function') syncSubstancesHidden();
+				}
+				var tagInput = document.getElementById('tag-text-input');
+				if (tagInput) tagInput.value = '';
+
+				// 2. Uncheck all cluster filters
+				var checks = document.querySelectorAll('.cluster-filter-check[data-cluster]');
+				checks.forEach(function(chk) {
+					chk.checked = false;
+					var key = chk.getAttribute('data-cluster');
+					if (key && typeof toggleClusterFilter === 'function') toggleClusterFilter(key, false);
+				});
+
+				// 3. Reset the concentration range filter
+				var concCheck = document.getElementById('conc-filter-check');
+				if (concCheck) {
+					concCheck.checked = false;
+					if (typeof toggleConcFilter === 'function') toggleConcFilter(false);
+				}
+				var concMin = document.getElementById('conc-range-min');
+				var concMax = document.getElementById('conc-range-max');
+				if (concMin && concMax) {
+					concMin.value = concMin.getAttribute('data-default') || '0.2';
+					concMax.value = concMax.getAttribute('data-default') || '50';
+					concMin.dispatchEvent(new Event('input', { bubbles: true }));
+				}
+
+				// 4. Uncheck skip SVG rendering option
+				var skipCheck = document.getElementById('skip-svg-check');
+				if (skipCheck) skipCheck.checked = false;
+
+				// 5. Clear any inline validation hint
+				if (typeof clearAdvancedHint === 'function') clearAdvancedHint();
+			}
 		</script>
 	</div>
 

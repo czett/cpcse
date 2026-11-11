@@ -1,5 +1,6 @@
 from decimal import Decimal
 import io
+import math
 import os
 import re
 import time
@@ -26,6 +27,46 @@ MIN_TERM_LENGTH = 3
 MIN_CLUSTER_THRESHOLD = 75
 MAX_CLUSTER_THRESHOLD = 100
 CLUSTER_TOP_RESULTS = 10
+DEFAULT_PER_PAGE = 25
+PER_PAGE_OPTIONS = (25, 50, 100)
+SORTABLE_COLUMNS = (
+    "trivial_name",
+    "batch_no",
+    "conc_um",
+    "rel_cell_count",
+    "relative_cell_count",
+    "induction",
+)
+SORT_ORDERS = ("asc", "desc")
+SORT_COLUMN_DB_MAP = {
+    "trivial_name": "c.trivial_name",
+    "batch_no": "c.batch_no",
+    "conc_um": "c.conc_um",
+    "rel_cell_count": "c.relative_cell_count",
+    "relative_cell_count": "c.relative_cell_count",
+    "induction": "c.induction",
+    "cluster_akt_pi3k_mtor": "c.cluster_akt_pi3k_mtor",
+    "cluster_aurora": "c.cluster_aurora",
+    "cluster_bet": "c.cluster_bet",
+    "cluster_dna_synthesis": "c.cluster_dna_synthesis",
+    "cluster_hdac": "c.cluster_hdac",
+    "cluster_hsp90": "c.cluster_hsp90",
+    "cluster_l_ch": "c.cluster_l_ch",
+    "cluster_mitostress": "c.cluster_mitostress",
+    "cluster_na_k_atpase": "c.cluster_na_k_atpase",
+    "cluster_protein_synthesis": "c.cluster_protein_synthesis",
+    "cluster_pyrimidine_synthesis": "c.cluster_pyrimidine_synthesis",
+    "cluster_tubulin": "c.cluster_tubulin",
+    "cluster_uncoupling": "c.cluster_uncoupling",
+}
+SORT_DEFAULT_ORDERS = {
+    "trivial_name": "asc",
+    "batch_no": "asc",
+    "conc_um": "asc",
+    "rel_cell_count": "desc",
+    "relative_cell_count": "desc",
+    "induction": "desc",
+}
 
 app = Flask(__name__)
 dotenv.load_dotenv()
@@ -56,6 +97,9 @@ DATASET_HEADER = [
 
 # Database Connection Pool
 DB_STRING = os.getenv("DB_STRING")
+COMPOUNDS_TABLE = os.getenv("COMPOUNDS_TABLE", "compounds_full")
+if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", COMPOUNDS_TABLE):
+    raise ValueError(f"Invalid COMPOUNDS_TABLE name: {COMPOUNDS_TABLE!r}")
 db_pool = None
 if DB_STRING:
     try:
@@ -136,6 +180,59 @@ def format_threshold_value(v: float) -> Union[str, float, int]:
     return int(f) if f.is_integer() else f
 
 
+def format_conc_value(v: Union[float, int, str]) -> str:
+    """Render a concentration value without trailing .0 for integers (e.g. 10 instead of 10.0)."""
+    f = float(v)
+    return str(int(f)) if f.is_integer() else str(f)
+
+
+def normalize_concentration_filters(raw: Optional[Union[str, List[str]]]) -> List[float]:
+    """Parse comma-separated or multi-value concentration inputs into a sorted list of floats."""
+    if not raw:
+        return []
+    items: List[str] = []
+    if isinstance(raw, list):
+        for part in raw:
+            if part:
+                items.extend(str(part).split(","))
+    elif isinstance(raw, str):
+        items = raw.split(",")
+    concs: List[float] = []
+    for item in items:
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            val = float(item)
+            if val not in concs:
+                concs.append(val)
+        except (ValueError, TypeError):
+            continue
+    concs.sort()
+    return concs
+
+
+def parse_conc_bound(raw: Optional[str]) -> Optional[float]:
+    """Parse an optional min_conc/max_conc query value as a float."""
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return float(str(raw).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def describe_conc_range(min_conc: Optional[float], max_conc: Optional[float]) -> str:
+    """Human-readable concentration range, e.g. 'Conc: 0.2–50 µM'."""
+    if min_conc is not None and max_conc is not None:
+        return f"Conc: {format_conc_value(min_conc)}\u2013{format_conc_value(max_conc)} \u00b5M"
+    if min_conc is not None:
+        return f"Conc: \u2265 {format_conc_value(min_conc)} \u00b5M"
+    if max_conc is not None:
+        return f"Conc: \u2264 {format_conc_value(max_conc)} \u00b5M"
+    return ""
+
+
 def describe_threshold(col: str, spec: dict) -> str:
     """Human-readable description of a min/max cluster threshold range."""
     cname = CLUSTER_DISPLAY_NAMES.get(col, col)
@@ -197,20 +294,120 @@ def resolve_query_plan(
     }
 
 
+def parse_page_number(raw: Optional[str], default: int = 1) -> int:
+    """Parse a 1-based page number, falling back to the default on bad input."""
+    try:
+        value = int(str(raw).strip())
+    except (TypeError, ValueError):
+        return default
+    return value if value >= 1 else default
+
+
+def parse_per_page(raw: Optional[str], default: int = DEFAULT_PER_PAGE) -> int:
+    """Parse a page size, accepting only the supported dropdown options."""
+    try:
+        value = int(str(raw).strip())
+    except (TypeError, ValueError):
+        return default
+    return value if value in PER_PAGE_OPTIONS else default
+
+
+def resolve_sort(
+    sort_by: Optional[str],
+    order: Optional[str],
+    thresholds: Optional[dict] = None,
+) -> tuple:
+    """Validate the requested sort key and direction.
+
+    Compound name, batch, and concentration default to ASC; relative cell count,
+    induction, and all 13 bioactivity cluster columns default to DESC.
+    Anything unsupported falls back to the default deterministic ordering.
+    """
+    sort_by = (sort_by or "").strip()
+    order = (order or "").strip().lower()
+    if order not in SORT_ORDERS:
+        order = None
+
+    if sort_by in SORTABLE_COLUMNS:
+        default_order = SORT_DEFAULT_ORDERS.get(sort_by, "asc")
+        return sort_by, order if order else default_order
+    if sort_by in CLUSTER_COLUMNS:
+        return sort_by, order if order else "desc"
+    return None, "asc"
+
+
+def _fetch_rows(sql: str, params: tuple) -> Optional[list]:
+    """Run a query, retrying once if a pooled connection went stale."""
+    conn = None
+    try:
+        if db_pool:
+            conn = db_pool.getconn()
+            # A pooled connection may have been dropped since it was returned;
+            # discard the stale handle and open a fresh one before querying.
+            if getattr(conn, "closed", 0):
+                db_pool.putconn(conn, close=True)
+                conn = db_pool.getconn()
+        else:
+            conn = psycopg2.connect(DB_STRING)
+
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                return cur.fetchall()
+        except Exception:
+            # The connection died mid-query: reconnect and retry exactly once so
+            # a dropped pooled connection does not surface as empty results.
+            if db_pool:
+                db_pool.putconn(conn, close=True)
+                conn = db_pool.getconn()
+            else:
+                conn.close()
+                conn = psycopg2.connect(DB_STRING)
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                return cur.fetchall()
+
+    except Exception as e:
+        print(f"Error querying database: {e}")
+        return None
+    finally:
+        if conn:
+            if db_pool:
+                db_pool.putconn(conn)
+            else:
+                conn.close()
+
+
 def find_compounds(
     query: Optional[str] = None,
     substances: Optional[List[str]] = None,
     thresholds: Optional[dict] = None,
+    min_conc: Optional[float] = None,
+    max_conc: Optional[float] = None,
     skip_svg: bool = False,
     order_by_cluster: Optional[str] = None,
     limit: Optional[int] = None,
-) -> Optional[List[List[Union[str, float]]]]:
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    page: Optional[int] = None,
+    per_page: Optional[int] = None,
+) -> Optional[dict]:
     """Search compounds from PostgreSQL matching query/substances and a cluster threshold.
 
-    Optionally sorts descending by a single cluster score and caps the result set.
+    Optionally sorts by a chosen column and returns one paginated slice. The
+    result carries the total match count so the caller can build page controls.
+    ``limit`` remains the hard result cap used by the cluster/concentration
+    guardrails (Case B and concentration-only searches).
     """
     if not DB_STRING:
         return None
+
+    paginate = per_page is not None
+    if paginate:
+        per_page = per_page if per_page in PER_PAGE_OPTIONS else DEFAULT_PER_PAGE
+        page = page if isinstance(page, int) and page > 0 else 1
+    else:
+        page = 1
 
     conditions = []
     params: List[Union[str, float]] = []
@@ -244,7 +441,15 @@ def find_compounds(
                 conditions.append(f"c.{col_name} <= %s")
                 params.append(float(t_max))
 
-    # If neither query, substances, nor thresholds are provided, return early
+    # 4. Concentration range filtering (min_conc <= c.conc_um <= max_conc)
+    if min_conc is not None:
+        conditions.append("c.conc_um >= %s")
+        params.append(float(min_conc))
+    if max_conc is not None:
+        conditions.append("c.conc_um <= %s")
+        params.append(float(max_conc))
+
+    # If neither query, substances, thresholds, nor concentration bounds are provided, return early
     if not conditions:
         return None
 
@@ -271,21 +476,31 @@ def find_compounds(
             order_params.extend([f"%{s.strip()}%", f"%{s.strip()}%"])
         group_order_expr = "CASE " + " ".join(rank_whens) + f" ELSE {len(substances)} END, "
 
-    # Ordering: compound groups follow the typed keyword order; within each group
-    # a cluster-ranked search sorts by the chosen cluster (DESC), and the default
-    # tie-breaker is always batch number then concentration.
-    if order_by_cluster in CLUSTER_COLUMNS:
+    # Ordering: compound groups follow the typed keyword order. Within a group,
+    # an explicit sort wins; otherwise cluster searches rank by their cluster
+    # (DESC) and plain searches fall back to batch number then concentration.
+    # Every branch ends with the same deterministic tie-breakers so pagination
+    # never shuffles rows that share the primary value.
+    tie_breakers = "c.trivial_name ASC, c.batch_no ASC, c.conc_um ASC"
+    if sort_by in SORT_COLUMN_DB_MAP:
+        direction = "DESC" if str(sort_order).lower() == "desc" else "ASC"
+        sort_col = SORT_COLUMN_DB_MAP[sort_by]
         order_clause = (
-            f"ORDER BY {group_order_expr}c.{order_by_cluster} DESC NULLS LAST, "
-            "c.batch_no, c.conc_um"
+            f"ORDER BY {group_order_expr}{sort_col} {direction} NULLS LAST, {tie_breakers}"
+        )
+    elif order_by_cluster in CLUSTER_COLUMNS:
+        order_clause = (
+            f"ORDER BY {group_order_expr}c.{order_by_cluster} DESC NULLS LAST, {tie_breakers}"
         )
     else:
-        order_clause = f"ORDER BY {group_order_expr}c.batch_no, c.conc_um"
+        order_clause = (
+            f"ORDER BY {group_order_expr}c.batch_no ASC, c.conc_um ASC, c.trivial_name ASC"
+        )
 
-    # Optional cap (Case B: top N highest-scoring profiles).
-    limit_clause = ""
-    if isinstance(limit, int) and limit > 0:
-        limit_clause = " LIMIT %s"
+    capped = isinstance(limit, int) and limit > 0
+    # Capped result sets are small (10 or 50 rows), so fetch the cap once and
+    # slice in Python; uncapped sets paginate in SQL with a window count.
+    use_window_count = paginate and not capped
 
     # 4. Structure SVG selection (Option C: skip_svg)
     if skip_svg:
@@ -295,91 +510,122 @@ def find_compounds(
         svg_select = "cs.svg"
         join_clause = "LEFT JOIN compound_structures cs ON c.smiles = cs.smiles"
 
-    sql = f"""
-        SELECT
-            COALESCE(NULLIF(TRIM(c.trivial_name), ''), 'Unnamed Compound') AS trivial_name,
-            c.smiles,
-            c.batch_no,
-            c.conc_um,
-            {svg_select},
-            c.relative_cell_count,
-            c.induction,
-            c.cluster_akt_pi3k_mtor,
-            c.cluster_aurora,
-            c.cluster_bet,
-            c.cluster_dna_synthesis,
-            c.cluster_hdac,
-            c.cluster_hsp90,
-            c.cluster_l_ch,
-            c.cluster_mitostress,
-            c.cluster_na_k_atpase,
-            c.cluster_protein_synthesis,
-            c.cluster_pyrimidine_synthesis,
-            c.cluster_tubulin,
-            c.cluster_uncoupling
-        FROM compounds c
-        {join_clause}
-        {where_clause}
-        {order_clause}{limit_clause};
-    """
+    count_select = ", COUNT(*) OVER() AS full_count" if use_window_count else ""
 
-    # Placeholder order must match the generated SQL: WHERE, then ORDER BY CASE, then LIMIT.
-    params.extend(order_params)
-    if limit_clause:
-        params.append(limit)
+    base_params = params + order_params
 
-    conn = None
-    try:
-        if db_pool:
-            conn = db_pool.getconn()
-            # A pooled connection may have been dropped since it was returned;
-            # discard the stale handle and open a fresh one before querying.
-            if getattr(conn, "closed", 0):
-                db_pool.putconn(conn, close=True)
-                conn = db_pool.getconn()
+    def build_query(offset_value: int) -> tuple:
+        if capped:
+            tail_sql = " LIMIT %s"
+            tail_params: List[Union[str, float]] = [limit]
+        elif paginate:
+            tail_sql = " LIMIT %s OFFSET %s"
+            tail_params = [per_page, offset_value]
         else:
-            conn = psycopg2.connect(DB_STRING)
+            tail_sql = ""
+            tail_params = []
 
-        try:
-            with conn.cursor() as cur:
-                cur.execute(sql, tuple(params))
-                rows = cur.fetchall()
-        except Exception:
-            # The connection died mid-query: reconnect and retry exactly once so
-            # a dropped pooled connection does not surface as empty results.
-            if db_pool:
-                db_pool.putconn(conn, close=True)
-                conn = db_pool.getconn()
+        sql = f"""
+            SELECT
+                COALESCE(NULLIF(TRIM(c.trivial_name), ''), 'Unnamed Compound') AS trivial_name,
+                c.smiles,
+                c.batch_no,
+                c.conc_um,
+                {svg_select},
+                c.relative_cell_count,
+                c.induction,
+                c.cluster_akt_pi3k_mtor,
+                c.cluster_aurora,
+                c.cluster_bet,
+                c.cluster_dna_synthesis,
+                c.cluster_hdac,
+                c.cluster_hsp90,
+                c.cluster_l_ch,
+                c.cluster_mitostress,
+                c.cluster_na_k_atpase,
+                c.cluster_protein_synthesis,
+                c.cluster_pyrimidine_synthesis,
+                c.cluster_tubulin,
+                c.cluster_uncoupling{count_select}
+            FROM {COMPOUNDS_TABLE} c
+            {join_clause}
+            {where_clause}
+            {order_clause}{tail_sql};
+        """
+        return sql, tuple(base_params + tail_params)
+
+    offset = (page - 1) * per_page if paginate else 0
+
+    if capped:
+        sql, query_params = build_query(0)
+        rows = _fetch_rows(sql, query_params)
+        if rows is None:
+            return None
+        total_results = len(rows)
+        total_pages = math.ceil(total_results / per_page) if paginate and total_results else (1 if total_results else 0)
+        if paginate:
+            if total_pages:
+                page = min(page, total_pages)
+                offset = (page - 1) * per_page
+                rows = rows[offset:offset + per_page]
             else:
-                conn.close()
-                conn = psycopg2.connect(DB_STRING)
-            with conn.cursor() as cur:
-                cur.execute(sql, tuple(params))
-                rows = cur.fetchall()
-
-        if not rows:
+                page = 1
+                rows = []
+    elif paginate:
+        sql, query_params = build_query(offset)
+        rows = _fetch_rows(sql, query_params)
+        if rows is None:
             return None
 
-        matching_rows: List[List[Union[str, float]]] = []
-        for row in rows:
-            clean_row = [_sanitize_db_value(val) for val in row]
-            if not clean_row[0] or str(clean_row[0]).strip() == "":
-                clean_row[0] = "Unnamed Compound"
-            matching_rows.append(clean_row)
-
-        output: List[List[Union[str, float]]] = [list(DATASET_HEADER)]
-        output.extend(matching_rows)
-        return output
-
-    except Exception as e:
-        print(f"Error querying database: {e}")
-        return None
-    finally:
-        if conn:
-            if db_pool:
-                db_pool.putconn(conn)
+        if rows:
+            total_results = int(rows[0][-1])
+            rows = [row[:-1] for row in rows]
+        elif offset > 0:
+            # Requested page is past the end: count matches, clamp to the last
+            # page, then fetch that slice.
+            count_sql = f"SELECT COUNT(*) FROM {COMPOUNDS_TABLE} c {where_clause};"
+            count_rows = _fetch_rows(count_sql, tuple(params))
+            total_results = int(count_rows[0][0]) if count_rows else 0
+            total_pages = math.ceil(total_results / per_page) if total_results else 0
+            if total_pages:
+                page = min(page, total_pages)
+                offset = (page - 1) * per_page
+                sql, query_params = build_query(offset)
+                refreshed = _fetch_rows(sql, query_params) or []
+                rows = [row[:-1] for row in refreshed]
             else:
-                conn.close()
+                page = 1
+                rows = []
+        else:
+            total_results = 0
+
+        total_pages = math.ceil(total_results / per_page) if total_results else 0
+        page = min(max(page, 1), total_pages) if total_pages else 1
+    else:
+        sql, query_params = build_query(0)
+        rows = _fetch_rows(sql, query_params)
+        if rows is None:
+            return None
+        total_results = len(rows)
+        total_pages = 1 if total_results else 0
+
+    matching_rows: List[List[Union[str, float]]] = []
+    for row in rows:
+        clean_row = [_sanitize_db_value(val) for val in row]
+        if not clean_row[0] or str(clean_row[0]).strip() == "":
+            clean_row[0] = "Unnamed Compound"
+        matching_rows.append(clean_row)
+
+    output: List[List[Union[str, float]]] = [list(DATASET_HEADER)]
+    output.extend(matching_rows)
+
+    return {
+        "output": output,
+        "total_results": total_results,
+        "page": page,
+        "per_page": per_page or DEFAULT_PER_PAGE,
+        "total_pages": total_pages,
+    }
 
 
 @app.route("/")
@@ -394,10 +640,22 @@ def search():
     # Post/Redirect/Get: turn any form POST into a canonical GET request so that
     # Back/Forward, refresh, and history navigation never re-POST or hit a 405.
     if request.method == "POST":
-        return redirect(url_for("search", **request.form.to_dict()), code=303)
+        form_dict = request.form.to_dict()
+        # Drop empty concentration bounds so they never become "min_conc=".
+        for key in ("min_conc", "max_conc"):
+            if not form_dict.get(key, "").strip():
+                form_dict.pop(key, None)
+        return redirect(url_for("search", **form_dict), code=303)
 
     start = time.time()
     inp = normalize_text(request.args.get("nm") or request.args.get("q") or "")
+
+    # Parse the optional concentration range (min_conc / max_conc).
+    min_conc = parse_conc_bound(request.values.get("min_conc"))
+    max_conc = parse_conc_bound(request.values.get("max_conc"))
+    if min_conc is not None and max_conc is not None and min_conc > max_conc:
+        min_conc, max_conc = max_conc, min_conc
+    has_conc_filter = min_conc is not None or max_conc is not None
 
     # Parse Advanced Search keywords. Input may be comma-, space-, or
     # newline-delimited; terms shorter than 3 chars and empty tokens are ignored,
@@ -458,11 +716,12 @@ def search():
     skip_svg = bool(request.args.get("skip_svg"))
 
     # Validate that at least one filter criterion is active (Case D is invalid)
-    if not inp and not substances and not thresholds:
+    if not inp and not substances and not thresholds and not has_conc_filter:
         return redirect("/error")
 
-    # If advanced search parameters (substances or thresholds) are present,
-    # prioritize them and do not restrict by the main top input
+    # If advanced search parameters (substances, thresholds, or concentration) are present without
+    # an explicit primary keyword input, prioritize them. If a keyword is provided alongside a
+    # concentration range, keep inp active so matching compounds are filtered by concentration.
     if substances or thresholds:
         inp = ""
 
@@ -475,6 +734,20 @@ def search():
             return redirect("/error")
         order_by_cluster = plan["order_by_cluster"]
         limit = plan["limit"]
+    elif has_conc_filter and not inp:
+        # Guardrail: searching purely by concentration without keyword or cluster
+        # enforces a strict LIMIT to prevent an unbounded full-table dump.
+        limit = 50
+
+    # Sorting is validated against the active cluster filters so a cluster score
+    # can only be chosen while that cluster is actually being filtered on.
+    sort_by, sort_order = resolve_sort(
+        request.args.get("sort_by"),
+        request.args.get("order"),
+        thresholds,
+    )
+    per_page = parse_per_page(request.args.get("per_page"))
+    page = parse_page_number(request.args.get("page"))
 
     counter = session.get("count", [time.strftime("%Y-%m-%d"), 0])
     if counter[1] >= MAX_SEARCH_COUNT:
@@ -483,28 +756,48 @@ def search():
             max_reached=True,
             min_threshold=min_threshold,
             max_threshold=max_threshold,
+            min_conc=None,
+            max_conc=None,
+            conc_min_value="0.2",
+            conc_max_value="50",
         )
 
     today = time.strftime("%Y-%m-%d")
     if counter[0] != today:
         session["count"] = [today, 0]
-    else:
+    elif page <= 1:
+        # Only a fresh search counts toward the daily quota; paging through an
+        # existing result set must not spend searches.
         counter[1] += 1
         session["count"] = counter
 
-    output = find_compounds(
+    result = find_compounds(
         query=inp if inp else None,
         substances=substances if substances else None,
         thresholds=thresholds if thresholds else None,
+        min_conc=min_conc,
+        max_conc=max_conc,
         skip_svg=skip_svg,
         order_by_cluster=order_by_cluster,
         limit=limit,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        per_page=per_page,
     )
-    if not output or len(output) <= 1:
+    if not result or result["total_results"] <= 0 or len(result["output"]) <= 1:
         return redirect("/error")
+
+    output = result["output"]
+    total_results = result["total_results"]
+    page = result["page"]
+    per_page = result["per_page"]
+    total_pages = result["total_pages"]
 
     end = time.time()
     elapsed_ms = int((end - start) * 1000)
+
+    conc_desc = describe_conc_range(min_conc, max_conc)
 
     # Determine informative display query label
     if substances:
@@ -514,14 +807,22 @@ def search():
                 describe_threshold(col, spec) for col, spec in thresholds.items()
             )
             display_query += f" + Cluster filter: {thresh_desc}"
+        if conc_desc:
+            display_query += f" + {conc_desc}"
     elif thresholds:
         # User searched purely by cluster thresholds
         thresh_desc = ", ".join(
             describe_threshold(col, spec) for col, spec in thresholds.items()
         )
         display_query = f"Cluster filter: {thresh_desc}"
-    else:
+        if conc_desc:
+            display_query += f" + {conc_desc}"
+    elif inp:
         display_query = inp
+        if conc_desc:
+            display_query += f" + {conc_desc}"
+    else:
+        display_query = conc_desc or "All Compounds"
 
     # Case B (cluster-only) returns the top 10 highest-scoring profiles
     if limit:
@@ -544,15 +845,73 @@ def search():
                 "min": format_threshold_value(lo) if lo is not None else None,
                 "max": format_threshold_value(hi) if hi is not None else None,
             })
+    if has_conc_filter:
+        active_filters.append({
+            "type": "concentration",
+            "key": "conc",
+            "label": conc_desc,
+            "min": format_conc_value(min_conc) if min_conc is not None else None,
+            "max": format_conc_value(max_conc) if max_conc is not None else None,
+        })
 
     active_filter_count = len(active_filters)
+
+    # Canonical search state used to rebuild URLs and hidden form fields without
+    # dropping any active filter when sorting, changing page size, or paging.
+    search_state = {}
+    if inp:
+        search_state["nm"] = inp
+    if substances:
+        search_state["substances"] = ",".join(substances)
+    if thresholds:
+        for col, spec in thresholds.items():
+            search_state["cluster"] = col
+            search_state["min_threshold_" + col] = format_threshold_value(spec.get("min"))
+            search_state["max_threshold_" + col] = format_threshold_value(spec.get("max"))
+    if min_conc is not None:
+        search_state["min_conc"] = format_conc_value(min_conc)
+    if max_conc is not None:
+        search_state["max_conc"] = format_conc_value(max_conc)
+    if skip_svg:
+        search_state["skip_svg"] = "1"
+
+    def _page_url(target_page: int) -> str:
+        params = dict(search_state)
+        params["per_page"] = per_page
+        if sort_by:
+            params["sort_by"] = sort_by
+            params["order"] = sort_order
+        params["page"] = target_page
+        return url_for("search", **params)
+
+    has_prev = page > 1
+    has_next = page < total_pages
+    pagination = {
+        "page": page,
+        "per_page": per_page,
+        "total_results": total_results,
+        "total_pages": total_pages,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_url": _page_url(page - 1) if has_prev else "",
+        "next_url": _page_url(page + 1) if has_next else "",
+        "page_start": (page - 1) * per_page + 1 if total_results else 0,
+        "page_end": min(page * per_page, total_results),
+    }
+
+    cluster_sort_key = next(iter(thresholds), None) if thresholds else None
+    cluster_sort_label = CLUSTER_DISPLAY_NAMES.get(cluster_sort_key, "") if cluster_sort_key else ""
 
     session["last_search"] = {
         "query": inp if inp else None,
         "substances": substances if substances else None,
         "thresholds": thresholds if thresholds else None,
+        "min_conc": min_conc,
+        "max_conc": max_conc,
         "order_by_cluster": order_by_cluster,
         "limit": limit,
+        "sort_by": sort_by,
+        "sort_order": sort_order,
         "skip_svg": True,  # Text export never needs SVG
         "display_name": display_query,
     }
@@ -567,14 +926,28 @@ def search():
         active_filter_count=active_filter_count,
         substances=substances,
         thresholds=thresholds,
+        min_conc=min_conc,
+        max_conc=max_conc,
+        conc_min_value=format_conc_value(min_conc) if min_conc is not None else "0.2",
+        conc_max_value=format_conc_value(max_conc) if max_conc is not None else "50",
         min_threshold=min_threshold,
         max_threshold=max_threshold,
         skip_svg=skip_svg,
         tmpfile_url="",
         max_reached=False,
-        results_length=len(output) - 1,
+        results_length=total_results,
         elapsed_ms=elapsed_ms,
         fname=display_query,
+        sort_by=sort_by,
+        order=sort_order,
+        page=page,
+        per_page=per_page,
+        per_page_options=PER_PAGE_OPTIONS,
+        total_pages=total_pages,
+        pagination=pagination,
+        search_state=search_state,
+        cluster_sort_key=cluster_sort_key,
+        cluster_sort_label=cluster_sort_label,
     )
 
 
@@ -591,26 +964,29 @@ def download(fname: Optional[str] = None):
 
     last_search = session.get("last_search")
     if last_search and (not query or query == last_search.get("display_name")):
-        results = find_compounds(
+        result = find_compounds(
             query=last_search.get("query"),
             substances=last_search.get("substances"),
             thresholds=last_search.get("thresholds"),
+            min_conc=last_search.get("min_conc"),
+            max_conc=last_search.get("max_conc"),
             skip_svg=True,
             order_by_cluster=last_search.get("order_by_cluster"),
             limit=last_search.get("limit"),
+            sort_by=last_search.get("sort_by"),
+            sort_order=last_search.get("sort_order") or "asc",
         )
         safe_filename = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in last_search.get("display_name", "search_results")) or "search_results"
     else:
         if not query:
             return redirect("/")
-        results = find_compounds(query=query, skip_svg=True)
+        result = find_compounds(query=query, skip_svg=True)
         safe_filename = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in query) or "search_results"
 
-    if not results or len(results) <= 1:
+    if not result or result["total_results"] <= 0 or len(result["output"]) <= 1:
         return redirect("/error")
 
-    content = export_to_text(results)
-    safe_filename = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in query) or "search_results"
+    content = export_to_text(result["output"])
 
     return Response(
         content,

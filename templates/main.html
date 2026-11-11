@@ -2,6 +2,22 @@
 
 {% block content %}
 <div class="results-layout">
+	<script>
+		(function () {
+			// Apply the saved desktop layout before paint to avoid a flash of the
+			// matrix view when the transposed table was selected.
+			try {
+				if (localStorage.getItem('cpcse_desktop_layout') === 'transposed') {
+					document.documentElement.classList.add('layout-transposed');
+				} else {
+					document.documentElement.classList.add('layout-matrix');
+				}
+			} catch (e) {
+				document.documentElement.classList.add('layout-matrix');
+			}
+		})();
+	</script>
+
 	<!-- Results Toolbar -->
 	<div class="results-toolbar">
 		<div class="toolbar-top">
@@ -33,9 +49,33 @@
 						</svg>
 					</button>
 				</div>
+				<input type="hidden" name="sort_by" value="{{ sort_by or '' }}">
+				<input type="hidden" name="order" value="{{ order or 'asc' }}">
+				<input type="hidden" name="per_page" value="{{ per_page or 25 }}">
+				<input type="hidden" name="page" value="{{ page or 1 }}">
 			</form>
 
 			<div class="toolbar-actions">
+				<!-- View Toggle for Desktop Users (Columns = matrix, Rows = transposed table) -->
+				<div class="view-toggle-group desktop-view-toggle" role="group" aria-label="Results layout">
+					<button type="button" class="view-toggle-btn active" id="btn-desktop-columns" onclick="setDesktopLayout('matrix')" aria-pressed="true" title="Compounds as columns">
+						<svg class="view-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+							<rect x="3" y="4" width="5" height="16" rx="1"></rect>
+							<rect x="9.5" y="4" width="5" height="16" rx="1"></rect>
+							<rect x="16" y="4" width="5" height="16" rx="1"></rect>
+						</svg>
+						<span>Columns</span>
+					</button>
+					<button type="button" class="view-toggle-btn" id="btn-desktop-rows" onclick="setDesktopLayout('transposed')" aria-pressed="false" title="Compounds as rows">
+						<svg class="view-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+							<rect x="3" y="4" width="18" height="4" rx="1"></rect>
+							<rect x="3" y="10" width="18" height="4" rx="1"></rect>
+							<rect x="3" y="16" width="18" height="4" rx="1"></rect>
+						</svg>
+						<span>Rows</span>
+					</button>
+				</div>
+
 				<!-- View Toggle for Mobile Users -->
 				<div class="view-toggle-group mobileonly">
 					<button type="button" class="view-toggle-btn active" id="btn-matrix-view" onclick="setResultsView('matrix')">Matrix</button>
@@ -54,6 +94,53 @@
 				{% endif %}
 			</div>
 		</div>
+
+		{% if results_length is defined %}
+		<div class="results-controls-bar">
+			<!-- Left side: Try searching pills (visible when Advanced Search is collapsed) -->
+			<div class="quick-search-section" id="quick-search-section">
+				<span class="quick-label">Try searching:</span>
+				<div class="quick-pills">
+					<button type="button" class="pill-btn" data-example="Ciclopirox" onclick="fillSearch('Ciclopirox')">Ciclopirox</button>
+					<button type="button" class="pill-btn" data-example="Fluoxetine" onclick="fillSearch('Fluoxetine')">Fluoxetine</button>
+					<button type="button" class="pill-btn" data-example="Nocodazole" onclick="fillSearch('Nocodazole')">Nocodazole</button>
+					<button type="button" class="pill-btn" data-example="Rapamycin" onclick="fillSearch('Rapamycin')">Rapamycin</button>
+					<button type="button" class="pill-btn" data-example="Vorinostat" onclick="fillSearch('Vorinostat')">Vorinostat</button>
+				</div>
+			</div>
+
+			<!-- Right side: Sort by and Per page controls -->
+			<form method="get" action="/search" class="results-controls-form" id="results-controls-form">
+				{% for key, value in search_state.items() %}
+				<input type="hidden" name="{{ key }}" value="{{ value }}">
+				{% endfor %}
+				<input type="hidden" name="page" value="1" id="results-page-input">
+				<div class="results-control-group">
+					<label class="results-control-label" for="sort-by-select">Sort by</label>
+					<select class="ui-select" name="sort_by" id="sort-by-select" onchange="onSortByChange()">
+						<option value=""{% if not sort_by %} selected{% endif %}>Default</option>
+						<option value="conc_um"{% if sort_by == 'conc_um' %} selected{% endif %}>Concentration</option>
+						<option value="batch_no"{% if sort_by == 'batch_no' %} selected{% endif %}>Batch number</option>
+						{% if cluster_sort_key %}
+						<option value="{{ cluster_sort_key }}"{% if sort_by == cluster_sort_key %} selected{% endif %}>Cluster score ({{ cluster_sort_label }})</option>
+						{% endif %}
+					</select>
+					<input type="hidden" name="order" id="sort-order-input" value="{{ order or 'asc' }}">
+					<button type="button" class="sort-order-btn" id="sort-order-btn" onclick="toggleSortOrder()" title="Toggle sort direction" aria-label="Toggle sort direction"{% if not sort_by %} disabled{% endif %}>
+						<span class="sort-order-arrow" id="sort-order-arrow">{{ '\u2193' if order == 'desc' else '\u2191' }}</span>
+					</button>
+				</div>
+				<div class="results-control-group">
+					<label class="results-control-label" for="per-page-select">Per page</label>
+					<select class="ui-select" name="per_page" id="per-page-select" onchange="submitResultsControls()">
+						{% for size in per_page_options %}
+						<option value="{{ size }}"{% if per_page == size %} selected{% endif %}>{{ size }}</option>
+						{% endfor %}
+					</select>
+				</div>
+			</form>
+		</div>
+		{% endif %}
 
 		{% if active_filters and active_filters|length > 0 %}
 		<div class="active-filter-chips-row">
@@ -133,7 +220,6 @@
 										<input type="range" class="range-max" name="max_threshold" min="75" max="100" value="{{ active_max }}" step="1" form="results-search-form">
 									</div>
 									<div class="slider-badge">
-										<span class="badge-label">&ge;</span>
 										<span class="range-val-min">{{ active_min }}%</span> &ndash; <span class="range-val-max">{{ active_max }}%</span>
 									</div>
 									<input type="hidden" name="threshold_{{ id_key }}" id="input-{{ id_key }}" value="{{ active_min if is_active else '' }}"{% if not is_active %} disabled{% endif %} form="results-search-form">
@@ -145,6 +231,38 @@
 						</div>
 					</div>
 				</div>
+
+				<hr class="border-t border-slate-200 my-4">
+
+				<!-- Section 3: Concentration Range Filter (Conc uM) -->
+				{% set conc_active = (min_conc is not none) or (max_conc is not none) %}
+				<div class="adv-section">
+					<h3 class="adv-panel-title">Concentration (&mu;M)</h3>
+					<p class="adv-section-subtitle text-slate-500 text-xs" style="font-size: 12px; font-weight: 400; color: #64748b; line-height: 1.4; margin-top: 2px; margin-bottom: 8px;">Filter compounds tested within a concentration range</p>
+					<div class="adv-field-group">
+						<div class="cluster-filter-card conc-filter-card{% if conc_active %} is-active{% endif %}" id="conc-filter-card">
+							<label class="cluster-check-label">
+								<input type="checkbox" class="cluster-filter-check" id="conc-filter-check" onchange="toggleConcFilter(this.checked)"{% if conc_active %} checked{% endif %}>
+								<span class="cluster-check-custom"></span>
+								<span class="cluster-check-text">Filter by Concentration (&micro;M)</span>
+							</label>
+							<div class="cluster-threshold-ctrl{% if not conc_active %} hidden{% endif %}" id="conc-threshold-ctrl">
+								<div class="range-slider-container conc-range-slider" data-conc="1">
+									<div class="slider-track"></div>
+									<input type="range" class="range-min" id="conc-range-min" min="0.01" max="100" value="{{ conc_min_value if conc_active else '10' }}" step="0.01" data-default="10" form="results-search-form">
+									<input type="range" class="range-max" id="conc-range-max" min="0.01" max="100" value="{{ conc_max_value }}" step="0.01" data-default="50" form="results-search-form">
+								</div>
+								<div class="slider-badge">
+									<span class="range-val-min">{{ conc_min_value if conc_active else '10' }} &micro;M</span> &ndash; <span class="range-val-max">{{ conc_max_value }} &micro;M</span>
+								</div>
+								<input type="hidden" name="min_conc" id="conc-min-input" value="{{ conc_min_value if conc_active else '' }}"{% if not conc_active %} disabled{% endif %} form="results-search-form">
+								<input type="hidden" name="max_conc" id="conc-max-input" value="{{ conc_max_value if conc_active else '' }}"{% if not conc_active %} disabled{% endif %} form="results-search-form">
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<hr class="border-t border-slate-200 my-4">
 
 				<!-- Option C: Rendering Options (Skip SVG Structure) -->
 				<div class="adv-field-group">
@@ -167,18 +285,6 @@
 						<button type="submit" form="results-search-form" formnovalidate class="ui-button-primary">Apply &amp; Search</button>
 					</div>
 				</div>
-			</div>
-		</div>
-
-		<!-- Try searching: visible only while Advanced Search is collapsed -->
-		<div class="quick-search-section" id="quick-search-section" style="margin-top: 8px; margin-bottom: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-			<span class="quick-label" style="margin: 0; padding: 0; line-height: 1;">Try searching:</span>
-			<div class="quick-pills" style="margin: 0; padding: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-				<button type="button" class="pill-btn" data-example="Ciclopirox" onclick="fillSearch('Ciclopirox')">Ciclopirox</button>
-				<button type="button" class="pill-btn" data-example="Fluoxetine" onclick="fillSearch('Fluoxetine')">Fluoxetine</button>
-				<button type="button" class="pill-btn" data-example="Nocodazole" onclick="fillSearch('Nocodazole')">Nocodazole</button>
-				<button type="button" class="pill-btn" data-example="Rapamycin" onclick="fillSearch('Rapamycin')">Rapamycin</button>
-				<button type="button" class="pill-btn" data-example="Vorinostat" onclick="fillSearch('Vorinostat')">Vorinostat</button>
 			</div>
 		</div>
 		<script>
@@ -223,35 +329,41 @@
 						var maxInput = container.querySelector('.range-max');
 						if (!minInput || !maxInput) { return; }
 
+						var isConc = container.getAttribute('data-conc') === '1';
 						var card = container.closest('.cluster-filter-card');
 						var badge = card ? card.querySelector('.slider-badge') : null;
 						var valMin = badge ? badge.querySelector('.range-val-min') : null;
 						var valMax = badge ? badge.querySelector('.range-val-max') : null;
 						var key = container.getAttribute('data-cluster') || '';
-						var hiddenMin = document.getElementById('input-min-' + key);
-						var hiddenMax = document.getElementById('input-max-' + key);
-						var hiddenLegacy = document.getElementById('input-' + key);
+						var hiddenMin = isConc ? document.getElementById('conc-min-input') : document.getElementById('input-min-' + key);
+						var hiddenMax = isConc ? document.getElementById('conc-max-input') : document.getElementById('input-max-' + key);
+						var hiddenLegacy = isConc ? null : document.getElementById('input-' + key);
 						var checkbox = card ? card.querySelector('.cluster-filter-check') : null;
+						var unit = isConc ? ' \u00b5M' : '%';
+
+						function displayVal(value) {
+							return String(parseFloat(value));
+						}
 
 						function render() {
-							var lo = parseInt(minInput.value, 10);
-							var hi = parseInt(maxInput.value, 10);
-							if (valMin) { valMin.textContent = lo + '%'; }
-							if (valMax) { valMax.textContent = hi + '%'; }
-							if (hiddenMin) { hiddenMin.value = lo; }
-							if (hiddenMax) { hiddenMax.value = hi; }
-							if (hiddenLegacy) { hiddenLegacy.value = lo; }
+							var lo = parseFloat(minInput.value);
+							var hi = parseFloat(maxInput.value);
+							if (valMin) { valMin.textContent = displayVal(lo) + unit; }
+							if (valMax) { valMax.textContent = displayVal(hi) + unit; }
+							if (hiddenMin) { hiddenMin.value = displayVal(lo); }
+							if (hiddenMax) { hiddenMax.value = displayVal(hi); }
+							if (hiddenLegacy) { hiddenLegacy.value = displayVal(lo); }
 						}
 
 						minInput.addEventListener('input', function () {
-							if (parseInt(minInput.value, 10) > parseInt(maxInput.value, 10)) {
+							if (parseFloat(minInput.value) > parseFloat(maxInput.value)) {
 								minInput.value = maxInput.value;
 							}
 							render();
 						});
 
 						maxInput.addEventListener('input', function () {
-							if (parseInt(maxInput.value, 10) < parseInt(minInput.value, 10)) {
+							if (parseFloat(maxInput.value) < parseFloat(minInput.value)) {
 								maxInput.value = minInput.value;
 							}
 							render();
@@ -335,6 +447,46 @@
 				initSearchMinLength();
 				document.addEventListener('DOMContentLoaded', initSearchMinLength);
 			})();
+
+			function resetAdvancedFilters() {
+				// 1. Clear tags
+				if (typeof substancesList !== 'undefined') {
+					substancesList = [];
+					if (typeof renderTags === 'function') renderTags();
+					if (typeof syncSubstancesHidden === 'function') syncSubstancesHidden();
+				}
+				var tagInput = document.getElementById('tag-text-input');
+				if (tagInput) tagInput.value = '';
+
+				// 2. Uncheck all cluster filters
+				var checks = document.querySelectorAll('.cluster-filter-check[data-cluster]');
+				checks.forEach(function(chk) {
+					chk.checked = false;
+					var key = chk.getAttribute('data-cluster');
+					if (key && typeof toggleClusterFilter === 'function') toggleClusterFilter(key, false);
+				});
+
+				// 3. Reset the concentration range filter
+				var concCheck = document.getElementById('conc-filter-check');
+				if (concCheck) {
+					concCheck.checked = false;
+					if (typeof toggleConcFilter === 'function') toggleConcFilter(false);
+				}
+				var concMin = document.getElementById('conc-range-min');
+				var concMax = document.getElementById('conc-range-max');
+				if (concMin && concMax) {
+					concMin.value = concMin.getAttribute('data-default') || '10';
+					concMax.value = concMax.getAttribute('data-default') || '50';
+					concMin.dispatchEvent(new Event('input', { bubbles: true }));
+				}
+
+				// 4. Uncheck skip SVG rendering option
+				var skipCheck = document.getElementById('skip-svg-check');
+				if (skipCheck) skipCheck.checked = false;
+
+				// 5. Clear any inline validation hint
+				if (typeof clearAdvancedHint === 'function') clearAdvancedHint();
+			}
 		</script>
 
 		{% if results_length is defined %}
@@ -436,7 +588,7 @@
 										{% endif %}
 									</div>
 								{% elif r == 4 %}
-									<div class="value img-value {{ row_class }}">
+									<div class="value img-value {{ row_class }}" data-compound-name="{{ col[0] }}">
 										{{ val | safe }}
 									</div>
 								{% elif r == 5 %}
@@ -526,6 +678,128 @@
 		</div>
 	</div>
 
+	<!-- 1b. Desktop Transposed Table (Rows = Compounds, Columns = Features) -->
+	{% if output and output|length > 1 %}
+	<div class="desktop-transposed-wrapper" id="transposed-table-container">
+		<div class="transposed-scroll">
+			<table class="transposed-table">
+				<thead>
+					{% set tp_cluster_keys = [
+						'cluster_akt_pi3k_mtor',
+						'cluster_aurora',
+						'cluster_bet',
+						'cluster_dna_synthesis',
+						'cluster_hdac',
+						'cluster_hsp90',
+						'cluster_l_ch',
+						'cluster_mitostress',
+						'cluster_na_k_atpase',
+						'cluster_protein_synthesis',
+						'cluster_pyrimidine_synthesis',
+						'cluster_tubulin',
+						'cluster_uncoupling'
+					] %}
+					{% set sort_arrow = '\u2193' if order == 'desc' else '\u2191' %}
+					{% set active_sort_dir = 'descending' if order == 'desc' else 'ascending' %}
+					<tr>
+						<th class="tp-sticky-col tp-corner{% if sort_by == 'trivial_name' %} is-sorted{% endif %}" scope="col" data-sort-key="trivial_name" data-default-order="asc" aria-sort="{{ active_sort_dir if sort_by == 'trivial_name' else 'none' }}">Compound{% if sort_by == 'trivial_name' %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</th>
+						<th class="tp-meta-col tp-batch-col{% if sort_by == 'batch_no' %} is-sorted{% endif %}" scope="col" data-sort-key="batch_no" data-default-order="asc" aria-sort="{{ active_sort_dir if sort_by == 'batch_no' else 'none' }}">Batch{% if sort_by == 'batch_no' %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</th>
+						<th class="tp-meta-col tp-conc-col{% if sort_by == 'conc_um' %} is-sorted{% endif %}" scope="col" data-sort-key="conc_um" data-default-order="asc" aria-sort="{{ active_sort_dir if sort_by == 'conc_um' else 'none' }}">Conc (&micro;M){% if sort_by == 'conc_um' %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</th>
+						<th class="tp-smiles-col" scope="col">SMILES</th>
+						<th class="tp-meta-col tp-cellcount-col{% if sort_by in ('rel_cell_count', 'relative_cell_count') %} is-sorted{% endif %}" scope="col" data-sort-key="rel_cell_count" data-default-order="desc" aria-sort="{{ active_sort_dir if sort_by in ('rel_cell_count', 'relative_cell_count') else 'none' }}">Cell Count{% if sort_by in ('rel_cell_count', 'relative_cell_count') %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</th>
+						<th class="tp-meta-col tp-induction-col{% if sort_by == 'induction' %} is-sorted{% endif %}" scope="col" data-sort-key="induction" data-default-order="desc" aria-sort="{{ active_sort_dir if sort_by == 'induction' else 'none' }}">Induction{% if sort_by == 'induction' %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</th>
+						{% for r in range(7, output[0]|length) %}
+						{% set ckey = tp_cluster_keys[r - 7] if (r - 7) < tp_cluster_keys|length else '' %}
+						<th class="tp-cluster-col{% if ckey and sort_by == ckey %} is-sorted{% endif %}" scope="col"{% if ckey %} data-sort-key="{{ ckey }}" data-default-order="desc" aria-sort="{{ active_sort_dir if sort_by == ckey else 'none' }}"{% endif %}><div class="tp-cluster-label">{{ output[0][r] | replace('Cluster ', '') | replace('Na+/K+ ATPase', 'Na<sup>+</sup>/K<sup>+</sup> ATPase') | replace('AKT/PI3K/MTOR', 'AKT/PI3K/<br>MTOR') | replace('AKT / PI3K / MTOR', 'AKT/PI3K/<br>MTOR') | safe }}{% if ckey and sort_by == ckey %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</div></th>
+						{% endfor %}
+					</tr>
+				</thead>
+				<tbody>
+					{% for col_idx in range(1, output|length) %}
+					{% set col = output[col_idx] %}
+					<tr>
+						<th class="tp-sticky-col tp-compound-cell" scope="row">
+							<div class="tp-compound-inner">
+								{% if not skip_svg and col[4] %}
+								<div class="tp-structure" data-compound-name="{{ col[0] }}">
+									{% if "<svg" in col[4] %}
+										{{ col[4] | safe }}
+									{% else %}
+										<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure of {{ col[0] }}">
+									{% endif %}
+								</div>
+								{% endif %}
+								<div class="tp-compound-name-wrap">
+									<span class="tp-compound-name" title="Click to copy full name&#10;{{ col[0] }}" data-copy="{{ col[0] }}" onclick="copyCompoundName(this.getAttribute('data-copy'), this)">{{ col[0] }}</span>
+								</div>
+							</div>
+						</th>
+						<td class="tp-meta-cell tp-batch-col">
+							{% if col[2] is number %}
+								<span class="val-number">{{ col[2] | round | int }}</span>
+							{% else %}
+								<span>{{ col[2] }}</span>
+							{% endif %}
+						</td>
+						<td class="tp-meta-cell tp-conc-col">
+							{% if col[3] is number %}
+								{% if col[3] < 1 %}
+									<span class="val-number">{{ col[3] }}</span>
+								{% else %}
+									<span class="val-number">{{ col[3] | round | int }}</span>
+								{% endif %}
+							{% else %}
+								<span>{{ col[3] }}</span>
+							{% endif %}
+						</td>
+						<td class="tp-smiles-cell" title="{{ col[1] }}" data-copy="{{ col[1] }}" onclick="copySmile(this.getAttribute('data-copy'), this)">
+							<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy SMILES">
+						</td>
+						<td class="tp-meta-cell tp-cellcount-col">
+							{% set is_low_cell_count = (col[5] is number and col[5] < 50) %}
+							{% if is_low_cell_count %}
+								<span class="cluster-badge cell-count-badge val-number">{{ col[5] | round | int }}</span>
+							{% elif col[5] is number %}
+								<span class="val-number">{{ col[5] | round | int }}</span>
+							{% else %}
+								<span>{{ col[5] }}</span>
+							{% endif %}
+						</td>
+						<td class="tp-meta-cell tp-induction-col">
+							{% if col[6] is number %}
+								<span class="val-number">{{ col[6] | round | int }}</span>
+							{% else %}
+								<span>{{ col[6] }}</span>
+							{% endif %}
+						</td>
+						{% for r in range(7, col|length) %}
+						{% set val = col[r] %}
+						<td class="tp-cluster-cell">
+							{% if val is number %}
+								{% if val > 95 %}
+									<span class="tp-cluster-badge nf val-number">{{ val | round | int }}</span>
+								{% elif val > 90 %}
+									<span class="tp-cluster-badge nt val-number">{{ val | round | int }}</span>
+								{% elif val > 85 %}
+									<span class="tp-cluster-badge ef val-number">{{ val | round | int }}</span>
+								{% elif val > 80 %}
+									<span class="tp-cluster-badge et val-number">{{ val | round | int }}</span>
+								{% else %}
+									<span class="tp-cluster-badge tp-neutral val-number">{{ val | round | int }}</span>
+								{% endif %}
+							{% else %}
+								<span class="tp-cluster-badge tp-neutral">{{ val }}</span>
+							{% endif %}
+						</td>
+						{% endfor %}
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+	{% endif %}
+
 	{% if output and output|length > 1 %}
 	<div class="metric-definitions">
 		<dl class="metric-definitions-list">
@@ -571,7 +845,7 @@
 
 				{% if not skip_svg %}
 				{% set is_duplicate_compound = (col_idx > 1 and col[1] == output[col_idx - 1][1]) %}
-				<div class="mobile-structure-box{% if is_duplicate_compound %} is-collapsed{% endif %}">
+				<div class="mobile-structure-box{% if is_duplicate_compound %} is-collapsed{% endif %}" data-compound-name="{{ col_trivial_name }}">
 					{% if is_duplicate_compound %}
 						<details class="structure-accordion">
 							<summary class="structure-toggle-summary">
@@ -582,7 +856,7 @@
 								{% if col[4] and "<svg" in col[4] %}
 									{{ col[4] | safe }}
 								{% else %}
-									<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+									<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure of {{ col_trivial_name }}" class="mobile-structure-img">
 								{% endif %}
 							</div>
 						</details>
@@ -590,7 +864,7 @@
 						{% if col[4] and "<svg" in col[4] %}
 							{{ col[4] | safe }}
 						{% else %}
-							<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure" class="mobile-structure-img">
+							<img src="data:image/jpeg;base64,{{ col[4] | safe }}" alt="Structure of {{ col_trivial_name }}" class="mobile-structure-img">
 						{% endif %}
 					{% endif %}
 				</div>
@@ -646,5 +920,46 @@
 		{% endfor %}
 	</div>
 	{% endif %}
+
+	{% if pagination is defined and pagination.total_pages > 1 %}
+	<div class="pagination-bar">
+		<div class="pagination-summary">
+			Showing <strong>{{ pagination.page_start }}&ndash;{{ pagination.page_end }}</strong> of <strong>{{ pagination.total_results }}</strong> result{% if pagination.total_results != 1 %}s{% endif %}
+		</div>
+		<div class="pagination-controls">
+			{% if pagination.has_prev %}
+			<a class="pagination-btn" href="{{ pagination.prev_url }}" aria-label="Previous page">
+				<span aria-hidden="true">&lsaquo;</span> Previous
+			</a>
+			{% else %}
+			<span class="pagination-btn disabled" aria-disabled="true">
+				<span aria-hidden="true">&lsaquo;</span> Previous
+			</span>
+			{% endif %}
+			<span class="pagination-indicator">Page {{ pagination.page }} of {{ pagination.total_pages }}</span>
+			{% if pagination.has_next %}
+			<a class="pagination-btn" href="{{ pagination.next_url }}" aria-label="Next page">
+				Next <span aria-hidden="true">&rsaquo;</span>
+			</a>
+			{% else %}
+			<span class="pagination-btn disabled" aria-disabled="true">
+				Next <span aria-hidden="true">&rsaquo;</span>
+			</span>
+			{% endif %}
+		</div>
+	</div>
+	{% endif %}
+</div>
+
+<!-- Structure Preview Modal -->
+<div id="structure-modal" class="structure-modal d-none" aria-hidden="true">
+	<div class="structure-modal-backdrop"></div>
+	<div class="structure-modal-content">
+		<button type="button" class="structure-modal-close" aria-label="Close">&times;</button>
+		<div class="structure-modal-body">
+			<img id="structure-modal-img" src="" alt="Chemical structure preview">
+			<p id="structure-modal-title" class="structure-modal-caption"></p>
+		</div>
+	</div>
 </div>
 {% endblock %}
