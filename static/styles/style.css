@@ -2579,9 +2579,40 @@ label sup,
     word-break: break-word;
     overflow-wrap: anywhere;
     cursor: pointer;
+    transition: color 0.15s ease;
 }
 
 .tp-compound-name:hover {
+    color: var(--primary-blue);
+}
+
+/* Sortable headers in the transposed Rows table */
+.transposed-table th[data-sort-key] {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+}
+
+.transposed-table th[data-sort-key] .tp-cluster-label {
+    transition: color 0.15s ease;
+}
+
+.transposed-table th[data-sort-key]:hover,
+.transposed-table th[data-sort-key]:hover .tp-cluster-label {
+    color: var(--primary-blue);
+}
+
+.transposed-table th[data-sort-key].is-sorted,
+.transposed-table th[data-sort-key].is-sorted .tp-cluster-label {
+    color: var(--primary-blue);
+}
+
+.transposed-table .tp-sort-arrow {
+    display: inline-block;
+    margin-left: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
     color: var(--primary-blue);
 }
 

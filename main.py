@@ -29,8 +29,44 @@ MAX_CLUSTER_THRESHOLD = 100
 CLUSTER_TOP_RESULTS = 10
 DEFAULT_PER_PAGE = 25
 PER_PAGE_OPTIONS = (25, 50, 100)
-SORTABLE_COLUMNS = ("batch_no", "conc_um")
+SORTABLE_COLUMNS = (
+    "trivial_name",
+    "batch_no",
+    "conc_um",
+    "rel_cell_count",
+    "relative_cell_count",
+    "induction",
+)
 SORT_ORDERS = ("asc", "desc")
+SORT_COLUMN_DB_MAP = {
+    "trivial_name": "c.trivial_name",
+    "batch_no": "c.batch_no",
+    "conc_um": "c.conc_um",
+    "rel_cell_count": "c.relative_cell_count",
+    "relative_cell_count": "c.relative_cell_count",
+    "induction": "c.induction",
+    "cluster_akt_pi3k_mtor": "c.cluster_akt_pi3k_mtor",
+    "cluster_aurora": "c.cluster_aurora",
+    "cluster_bet": "c.cluster_bet",
+    "cluster_dna_synthesis": "c.cluster_dna_synthesis",
+    "cluster_hdac": "c.cluster_hdac",
+    "cluster_hsp90": "c.cluster_hsp90",
+    "cluster_l_ch": "c.cluster_l_ch",
+    "cluster_mitostress": "c.cluster_mitostress",
+    "cluster_na_k_atpase": "c.cluster_na_k_atpase",
+    "cluster_protein_synthesis": "c.cluster_protein_synthesis",
+    "cluster_pyrimidine_synthesis": "c.cluster_pyrimidine_synthesis",
+    "cluster_tubulin": "c.cluster_tubulin",
+    "cluster_uncoupling": "c.cluster_uncoupling",
+}
+SORT_DEFAULT_ORDERS = {
+    "trivial_name": "asc",
+    "batch_no": "asc",
+    "conc_um": "asc",
+    "rel_cell_count": "desc",
+    "relative_cell_count": "desc",
+    "induction": "desc",
+}
 
 app = Flask(__name__)
 dotenv.load_dotenv()
@@ -279,12 +315,12 @@ def parse_per_page(raw: Optional[str], default: int = DEFAULT_PER_PAGE) -> int:
 def resolve_sort(
     sort_by: Optional[str],
     order: Optional[str],
-    thresholds: Optional[dict],
+    thresholds: Optional[dict] = None,
 ) -> tuple:
     """Validate the requested sort key and direction.
 
-    Cluster sorts are only honoured while that cluster has an active filter;
-    sorting by a cluster score defaults to DESCENDING (highest similarity first).
+    Compound name, batch, and concentration default to ASC; relative cell count,
+    induction, and all 13 bioactivity cluster columns default to DESC.
     Anything unsupported falls back to the default deterministic ordering.
     """
     sort_by = (sort_by or "").strip()
@@ -292,10 +328,10 @@ def resolve_sort(
     if order not in SORT_ORDERS:
         order = None
 
-    active_clusters = set((thresholds or {}).keys())
     if sort_by in SORTABLE_COLUMNS:
-        return sort_by, order if order else "asc"
-    if sort_by in CLUSTER_COLUMNS and sort_by in active_clusters:
+        default_order = SORT_DEFAULT_ORDERS.get(sort_by, "asc")
+        return sort_by, order if order else default_order
+    if sort_by in CLUSTER_COLUMNS:
         return sort_by, order if order else "desc"
     return None, "asc"
 
@@ -446,10 +482,11 @@ def find_compounds(
     # Every branch ends with the same deterministic tie-breakers so pagination
     # never shuffles rows that share the primary value.
     tie_breakers = "c.trivial_name ASC, c.batch_no ASC, c.conc_um ASC"
-    if sort_by in SORTABLE_COLUMNS or sort_by in CLUSTER_COLUMNS:
+    if sort_by in SORT_COLUMN_DB_MAP:
         direction = "DESC" if str(sort_order).lower() == "desc" else "ASC"
+        sort_col = SORT_COLUMN_DB_MAP[sort_by]
         order_clause = (
-            f"ORDER BY {group_order_expr}c.{sort_by} {direction} NULLS LAST, {tie_breakers}"
+            f"ORDER BY {group_order_expr}{sort_col} {direction} NULLS LAST, {tie_breakers}"
         )
     elif order_by_cluster in CLUSTER_COLUMNS:
         order_clause = (

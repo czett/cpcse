@@ -190,6 +190,62 @@ function initDesktopLayout() {
 	setDesktopLayout(stored === "transposed" ? "transposed" : "matrix", false);
 }
 
+function initTransposedSortHeaders() {
+	var headers = document.querySelectorAll(".transposed-table th[data-sort-key]");
+	headers.forEach(function(th) {
+		if (th.dataset.sortListenerReady === "1") return;
+		th.dataset.sortListenerReady = "1";
+		th.addEventListener("click", function() {
+			var sortKey = th.getAttribute("data-sort-key");
+			if (!sortKey) return;
+			var defaultOrder = (th.getAttribute("data-default-order") || "asc").toLowerCase();
+
+			var url = new URL(window.location.href);
+			var params = url.searchParams;
+
+			// Seed active filters/per_page from #results-controls-form when missing from the URL
+			var controlsForm = document.getElementById("results-controls-form");
+			if (controlsForm) {
+				var fd = new FormData(controlsForm);
+				fd.forEach(function(val, key) {
+					if (key !== "sort_by" && key !== "order" && key !== "page" && val !== "" && !params.has(key)) {
+						params.set(key, String(val));
+					}
+				});
+			}
+
+			var currentSort = params.get("sort_by") || "";
+			var currentOrder = (params.get("order") || "").toLowerCase();
+			if (!currentSort && controlsForm) {
+				var hiddenSort = document.querySelector("#results-search-form input[name='sort_by']");
+				if (hiddenSort && hiddenSort.value) currentSort = hiddenSort.value;
+			}
+			if (!currentOrder && controlsForm) {
+				var orderInput = document.getElementById("sort-order-input");
+				if (orderInput && orderInput.value) currentOrder = orderInput.value.toLowerCase();
+			}
+
+			var isSameCol = (currentSort === sortKey) ||
+				(sortKey === "rel_cell_count" && currentSort === "relative_cell_count") ||
+				(sortKey === "relative_cell_count" && currentSort === "rel_cell_count");
+
+			var nextOrder;
+			if (isSameCol) {
+				var effOrder = (currentOrder === "asc" || currentOrder === "desc") ? currentOrder : defaultOrder;
+				nextOrder = effOrder === "asc" ? "desc" : "asc";
+			} else {
+				nextOrder = (defaultOrder === "desc") ? "desc" : "asc";
+			}
+
+			params.set("sort_by", sortKey);
+			params.set("order", nextOrder);
+			params.set("page", "1");
+
+			window.location.href = url.pathname + "?" + params.toString();
+		});
+	});
+}
+
 // Input clear button listener and responsive initial view setup
 document.addEventListener("DOMContentLoaded", function() {
 	var searchInput = document.getElementById("compound-search-input");
@@ -217,6 +273,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	}
 
 	initDesktopLayout();
+	initTransposedSortHeaders();
 	initTagInput();
 });
 

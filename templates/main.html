@@ -684,15 +684,33 @@
 		<div class="transposed-scroll">
 			<table class="transposed-table">
 				<thead>
+					{% set tp_cluster_keys = [
+						'cluster_akt_pi3k_mtor',
+						'cluster_aurora',
+						'cluster_bet',
+						'cluster_dna_synthesis',
+						'cluster_hdac',
+						'cluster_hsp90',
+						'cluster_l_ch',
+						'cluster_mitostress',
+						'cluster_na_k_atpase',
+						'cluster_protein_synthesis',
+						'cluster_pyrimidine_synthesis',
+						'cluster_tubulin',
+						'cluster_uncoupling'
+					] %}
+					{% set sort_arrow = '\u2193' if order == 'desc' else '\u2191' %}
+					{% set active_sort_dir = 'descending' if order == 'desc' else 'ascending' %}
 					<tr>
-						<th class="tp-sticky-col tp-corner" scope="col">Compound</th>
-						<th class="tp-meta-col tp-batch-col" scope="col">Batch</th>
-						<th class="tp-meta-col tp-conc-col" scope="col">Conc (&micro;M)</th>
+						<th class="tp-sticky-col tp-corner{% if sort_by == 'trivial_name' %} is-sorted{% endif %}" scope="col" data-sort-key="trivial_name" data-default-order="asc" aria-sort="{{ active_sort_dir if sort_by == 'trivial_name' else 'none' }}">Compound{% if sort_by == 'trivial_name' %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</th>
+						<th class="tp-meta-col tp-batch-col{% if sort_by == 'batch_no' %} is-sorted{% endif %}" scope="col" data-sort-key="batch_no" data-default-order="asc" aria-sort="{{ active_sort_dir if sort_by == 'batch_no' else 'none' }}">Batch{% if sort_by == 'batch_no' %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</th>
+						<th class="tp-meta-col tp-conc-col{% if sort_by == 'conc_um' %} is-sorted{% endif %}" scope="col" data-sort-key="conc_um" data-default-order="asc" aria-sort="{{ active_sort_dir if sort_by == 'conc_um' else 'none' }}">Conc (&micro;M){% if sort_by == 'conc_um' %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</th>
 						<th class="tp-smiles-col" scope="col">SMILES</th>
-						<th class="tp-meta-col tp-cellcount-col" scope="col">Cell Count</th>
-						<th class="tp-meta-col tp-induction-col" scope="col">Induction</th>
+						<th class="tp-meta-col tp-cellcount-col{% if sort_by in ('rel_cell_count', 'relative_cell_count') %} is-sorted{% endif %}" scope="col" data-sort-key="rel_cell_count" data-default-order="desc" aria-sort="{{ active_sort_dir if sort_by in ('rel_cell_count', 'relative_cell_count') else 'none' }}">Cell Count{% if sort_by in ('rel_cell_count', 'relative_cell_count') %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</th>
+						<th class="tp-meta-col tp-induction-col{% if sort_by == 'induction' %} is-sorted{% endif %}" scope="col" data-sort-key="induction" data-default-order="desc" aria-sort="{{ active_sort_dir if sort_by == 'induction' else 'none' }}">Induction{% if sort_by == 'induction' %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</th>
 						{% for r in range(7, output[0]|length) %}
-						<th class="tp-cluster-col" scope="col"><div class="tp-cluster-label">{{ output[0][r] | replace('Cluster ', '') | replace('Na+/K+ ATPase', 'Na<sup>+</sup>/K<sup>+</sup> ATPase') | replace('AKT/PI3K/MTOR', 'AKT/PI3K/<br>MTOR') | replace('AKT / PI3K / MTOR', 'AKT/PI3K/<br>MTOR') | safe }}</div></th>
+						{% set ckey = tp_cluster_keys[r - 7] if (r - 7) < tp_cluster_keys|length else '' %}
+						<th class="tp-cluster-col{% if ckey and sort_by == ckey %} is-sorted{% endif %}" scope="col"{% if ckey %} data-sort-key="{{ ckey }}" data-default-order="desc" aria-sort="{{ active_sort_dir if sort_by == ckey else 'none' }}"{% endif %}><div class="tp-cluster-label">{{ output[0][r] | replace('Cluster ', '') | replace('Na+/K+ ATPase', 'Na<sup>+</sup>/K<sup>+</sup> ATPase') | replace('AKT/PI3K/MTOR', 'AKT/PI3K/<br>MTOR') | replace('AKT / PI3K / MTOR', 'AKT/PI3K/<br>MTOR') | safe }}{% if ckey and sort_by == ckey %}<span class="tp-sort-arrow" aria-hidden="true">{{ sort_arrow }}</span>{% endif %}</div></th>
 						{% endfor %}
 					</tr>
 				</thead>
