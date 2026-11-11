@@ -61,6 +61,9 @@ DATASET_HEADER = [
 
 # Database Connection Pool
 DB_STRING = os.getenv("DB_STRING")
+COMPOUNDS_TABLE = os.getenv("COMPOUNDS_TABLE", "compounds_full")
+if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", COMPOUNDS_TABLE):
+    raise ValueError(f"Invalid COMPOUNDS_TABLE name: {COMPOUNDS_TABLE!r}")
 db_pool = None
 if DB_STRING:
     try:
@@ -507,7 +510,7 @@ def find_compounds(
                 c.cluster_pyrimidine_synthesis,
                 c.cluster_tubulin,
                 c.cluster_uncoupling{count_select}
-            FROM compounds c
+            FROM {COMPOUNDS_TABLE} c
             {join_clause}
             {where_clause}
             {order_clause}{tail_sql};
@@ -543,7 +546,7 @@ def find_compounds(
         elif offset > 0:
             # Requested page is past the end: count matches, clamp to the last
             # page, then fetch that slice.
-            count_sql = f"SELECT COUNT(*) FROM compounds c {where_clause};"
+            count_sql = f"SELECT COUNT(*) FROM {COMPOUNDS_TABLE} c {where_clause};"
             count_rows = _fetch_rows(count_sql, tuple(params))
             total_results = int(count_rows[0][0]) if count_rows else 0
             total_pages = math.ceil(total_results / per_page) if total_results else 0

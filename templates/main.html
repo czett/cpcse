@@ -686,13 +686,13 @@
 				<thead>
 					<tr>
 						<th class="tp-sticky-col tp-corner" scope="col">Compound</th>
-						<th class="tp-meta-col" scope="col">Batch No</th>
-						<th class="tp-meta-col" scope="col">Conc (&micro;M)</th>
+						<th class="tp-meta-col tp-batch-col" scope="col">Batch</th>
+						<th class="tp-meta-col tp-conc-col" scope="col">Conc (&micro;M)</th>
 						<th class="tp-smiles-col" scope="col">SMILES</th>
-						<th class="tp-meta-col" scope="col">Relative Cell Count</th>
-						<th class="tp-meta-col" scope="col">Induction</th>
+						<th class="tp-meta-col tp-cellcount-col" scope="col">Cell Count</th>
+						<th class="tp-meta-col tp-induction-col" scope="col">Induction</th>
 						{% for r in range(7, output[0]|length) %}
-						<th class="tp-cluster-col" scope="col">{{ output[0][r] | replace('Cluster ', '') | replace('Na+/K+ ATPase', 'Na<sup>+</sup>/K<sup>+</sup> ATPase') | safe }}</th>
+						<th class="tp-cluster-col" scope="col"><div class="tp-cluster-label">{{ output[0][r] | replace('Cluster ', '') | replace('Na+/K+ ATPase', 'Na<sup>+</sup>/K<sup>+</sup> ATPase') | replace('AKT/PI3K/MTOR', 'AKT/PI3K/<br>MTOR') | replace('AKT / PI3K / MTOR', 'AKT/PI3K/<br>MTOR') | safe }}</div></th>
 						{% endfor %}
 					</tr>
 				</thead>
@@ -716,14 +716,14 @@
 								</div>
 							</div>
 						</th>
-						<td class="tp-meta-cell">
+						<td class="tp-meta-cell tp-batch-col">
 							{% if col[2] is number %}
 								<span class="val-number">{{ col[2] | round | int }}</span>
 							{% else %}
 								<span>{{ col[2] }}</span>
 							{% endif %}
 						</td>
-						<td class="tp-meta-cell">
+						<td class="tp-meta-cell tp-conc-col">
 							{% if col[3] is number %}
 								{% if col[3] < 1 %}
 									<span class="val-number">{{ col[3] }}</span>
@@ -734,11 +734,10 @@
 								<span>{{ col[3] }}</span>
 							{% endif %}
 						</td>
-						<td class="tp-smiles-cell" title="{{ col[1] }}">
-							<span class="tp-smiles-text" onclick="copySmile('{{ col[1] | replace("'", "\\'") }}', this.closest('.tp-smiles-cell'))">{{ col[1] }}</span>
-							<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy SMILES" onclick="copySmile('{{ col[1] | replace("'", "\\'") }}', this.closest('.tp-smiles-cell'))">
+						<td class="tp-smiles-cell" title="{{ col[1] }}" data-copy="{{ col[1] }}" onclick="copySmile(this.getAttribute('data-copy'), this)">
+							<img src="{{ url_for('static', filename='logos/copy.svg') }}" class="copy-icon-img" alt="Copy SMILES">
 						</td>
-						<td class="tp-meta-cell">
+						<td class="tp-meta-cell tp-cellcount-col">
 							{% set is_low_cell_count = (col[5] is number and col[5] < 50) %}
 							{% if is_low_cell_count %}
 								<span class="cluster-badge cell-count-badge val-number">{{ col[5] | round | int }}</span>
@@ -748,7 +747,7 @@
 								<span>{{ col[5] }}</span>
 							{% endif %}
 						</td>
-						<td class="tp-meta-cell">
+						<td class="tp-meta-cell tp-induction-col">
 							{% if col[6] is number %}
 								<span class="val-number">{{ col[6] | round | int }}</span>
 							{% else %}

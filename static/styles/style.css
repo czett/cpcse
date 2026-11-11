@@ -2477,17 +2477,19 @@ label sup,
     top: 0;
     z-index: 4;
     background: #f8fafc;
-    color: var(--muted-foreground);
+    color: #475569;
     font-size: 11px;
     font-weight: 600;
     line-height: 1.25;
     white-space: normal;
     word-break: normal;
-    hyphens: auto;
-    padding: 10px 4px;
-    vertical-align: bottom;
+    overflow-wrap: normal;
+    padding: 12px 4px;
+    vertical-align: middle !important;
     text-align: center;
-    min-height: 48px;
+    line-height: 1.25;
+    height: auto !important;
+    min-height: 0 !important;
 }
 
 .transposed-table tbody th,
@@ -2505,9 +2507,10 @@ label sup,
 .transposed-table .tp-sticky-col {
     position: sticky;
     left: 0;
-    min-width: 250px;
-    max-width: 280px;
-    padding: 12px 16px;
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+    padding: 10px 12px;
     text-align: left;
     z-index: 3;
     background: var(--card);
@@ -2517,7 +2520,7 @@ label sup,
 .transposed-table thead .tp-corner {
     z-index: 7;
     background: #f8fafc;
-    color: var(--muted-foreground);
+    color: #475569;
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -2588,13 +2591,13 @@ label sup,
     min-width: 84px;
     max-width: 84px;
     text-align: center;
-    vertical-align: bottom;
-    padding: 10px 4px;
+    vertical-align: middle !important;
+    padding: 12px 4px;
+    line-height: 1.25;
     box-sizing: border-box;
     white-space: normal;
-    line-height: 1.25;
     word-break: normal;
-    hyphens: auto;
+    overflow-wrap: normal;
 }
 
 .transposed-table .tp-meta-cell {
@@ -2611,12 +2614,53 @@ label sup,
     color: var(--card-foreground);
 }
 
+.transposed-table .tp-batch-col,
+.transposed-table .tp-batch-col.tp-meta-cell,
+.transposed-table .tp-meta-cell.tp-batch-col {
+    width: 52px;
+    min-width: 52px;
+    max-width: 52px;
+    text-align: center;
+}
+
+.transposed-table .tp-conc-col,
+.transposed-table .tp-meta-cell.tp-conc-col {
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
+    text-align: center;
+}
+
+.transposed-table .tp-cellcount-col,
+.transposed-table .tp-meta-cell.tp-cellcount-col {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    text-align: center;
+}
+
+.transposed-table .tp-induction-col,
+.transposed-table .tp-meta-cell.tp-induction-col {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    text-align: center;
+}
+
 .transposed-table .tp-smiles-col {
-    min-width: 200px;
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    text-align: center;
+    padding: 10px 2px;
 }
 
 .transposed-table .tp-smiles-cell {
-    max-width: 230px;
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    text-align: center;
+    padding: 6px 2px;
     white-space: nowrap;
 }
 
@@ -2637,7 +2681,7 @@ label sup,
 }
 
 .tp-smiles-cell .copy-icon-img {
-    margin-left: 6px;
+    margin-left: 0;
     vertical-align: middle;
 }
 
@@ -2648,42 +2692,61 @@ label sup,
 
 /* Bioactivity cluster columns */
 .transposed-table .tp-cluster-col {
-    min-width: 84px;
-    width: 84px;
-    max-width: 84px;
-    padding: 10px 4px;
+    width: 76px;
+    min-width: 76px;
+    max-width: 76px;
+    padding: 12px 4px;
+    height: auto;
+    min-height: 0 !important;
     white-space: normal;
     word-break: normal;
-    hyphens: auto;
+    overflow-wrap: normal;
+    overflow: hidden;
     text-align: center;
-    vertical-align: bottom;
+    vertical-align: middle !important;
     line-height: 1.25;
     box-sizing: border-box;
+}
+
+.transposed-table .tp-cluster-label {
+    display: block;
+    max-width: 76px;
+    overflow: hidden;
+    box-sizing: border-box;
+    text-align: center;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+    font-size: 11px;
+    line-height: 1.25;
+    font-weight: 600;
+    color: #475569;
+    margin: 0 auto;
 }
 
 .transposed-table .tp-cluster-cell {
     text-align: center;
     vertical-align: middle;
-    padding: 4px;
-    min-width: 84px;
-    width: 84px;
-    max-width: 84px;
+    padding: 6px 2px;
+    min-width: 46px;
+    width: 46px;
+    max-width: 46px;
     height: 56px;
     min-height: 56px;
     box-sizing: border-box;
 }
 
-.tp-cluster-badge {
+.transposed-table .tp-cluster-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 34px;
+    height: 28px;
+    padding: 0;
     margin: 0 auto;
-    min-width: 44px;
-    height: 34px;
-    padding: 4px 10px;
-    border-radius: 8px;
+    font-size: 12px;
     font-weight: 600;
-    font-size: 0.8125rem;
+    border-radius: 6px;
     line-height: 1;
     font-variant-numeric: tabular-nums;
     box-sizing: border-box;
